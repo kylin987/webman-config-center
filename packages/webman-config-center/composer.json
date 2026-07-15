@@ -1,0 +1,23 @@
+{
+  "name": "yhs/webman-config-center",
+  "description": "Lightweight, cache-first configuration client for Webman.",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.1",
+    "guzzlehttp/guzzle": "^7.10",
+    "nikic/php-parser": "^5.0",
+    "symfony/yaml": "^6.4"
+  },
+  "autoload": {
+    "psr-4": {
+      "Yhs\\WebmanConfigCenter\\": "src/"
+    }
+  },
+  "bin": [
+    "bin/config-center-sync"
+  ],
+  "minimum-stability": "stable",
+  "prefer-stable": true
+}
+
