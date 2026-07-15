@@ -1,18 +1,20 @@
-FROM php:8.3.22-cli-alpine
+FROM composer:2 AS vendor
 
-RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
-
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories \
-  && apk update --no-cache \
-  && docker-php-source extract
-
-# install extensions
-RUN docker-php-ext-install pdo pdo_mysql -j$(nproc) pcntl
-
-# enable opcache and pcntl
-RUN docker-php-ext-enable opcache pcntl
-RUN docker-php-source delete \
-    rm -rf /var/cache/apk/*
-
-RUN mkdir -p /app
 WORKDIR /app
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+
+FROM php:8.3-cli-alpine
+
+RUN apk add --no-cache libzip-dev \
+    && docker-php-ext-install pdo pdo_mysql pcntl \
+    && docker-php-ext-enable opcache
+
+WORKDIR /app
+COPY --from=vendor /app/vendor ./vendor
+COPY . .
+
+RUN mkdir -p runtime/logs
+
+EXPOSE 8787
+CMD ["php", "start.php", "start"]
