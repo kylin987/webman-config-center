@@ -18,6 +18,10 @@ Route::get('/health', function () {
     return json(['status' => 'ok']);
 });
 
+Route::get('/', function () {
+    return response((string) file_get_contents(public_path('index.html')))->withHeader('Content-Type', 'text/html; charset=utf-8');
+});
+
 foreach (glob(base_path() . '/app/api/route/*.php') as $filename) {
     include_once $filename;
 }
@@ -27,7 +31,6 @@ foreach (glob(base_path() . '/app/admin/route/*.php') as $filename) {
 }
 
 Route::disableDefaultRoute();
-
 
 
 

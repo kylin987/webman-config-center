@@ -59,6 +59,7 @@ final class ConfigSynchronizer
         $path = $this->safePath((string) $mapping['path']);
         $this->writer->write($path, $item->content);
         $this->writeState($item->key(), ['downloaded_revision' => $item->revision, 'md5' => $item->md5]);
+        (new ApplyRequestWriter(rtrim((string) $this->config['state_dir'], '/'), (string) ($this->config['apply_secret'] ?? '')))->write($item->key(), $item->revision);
         return ['key' => $item->key(), 'status' => 'updated', 'revision' => $item->revision, 'path' => $path];
     }
 

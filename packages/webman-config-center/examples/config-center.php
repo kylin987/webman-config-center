@@ -11,12 +11,14 @@ return [
     'redis_url' => getenv('CONFIG_CENTER_REDIS_URL') ?: 'tls://redis.example.com:6379',
     'event_channel' => 'config-center:changed',
     'poll_interval' => 60,
+    'apply_secret' => getenv('CONFIG_CENTER_APPLY_SECRET') ?: '',
     'items' => [
         [
             'group' => 'DEFAULT_GROUP',
             'data_id' => 'app.php',
             'format' => 'php',
             'path' => 'app.php',
+            'reload_command' => 'php start.php reload',
         ],
     ],
 ];
