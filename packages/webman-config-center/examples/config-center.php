@@ -8,6 +8,9 @@ return [
     'state_dir' => runtime_path() . '/config-center',
     'connect_timeout' => 3,
     'timeout' => 8,
+    'redis_url' => getenv('CONFIG_CENTER_REDIS_URL') ?: 'tls://redis.example.com:6379',
+    'event_channel' => 'config-center:changed',
+    'poll_interval' => 60,
     'items' => [
         [
             'group' => 'DEFAULT_GROUP',
@@ -17,4 +20,3 @@ return [
         ],
     ],
 ];
-
