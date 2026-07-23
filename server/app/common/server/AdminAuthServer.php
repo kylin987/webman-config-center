@@ -6,6 +6,7 @@ use app\common\library\Totp;
 use app\common\model\AdminMfaChallenge;
 use app\common\model\AdminSession;
 use app\common\model\AdminUser;
+use app\common\library\DateTimeFormatter;
 use InvalidArgumentException;
 
 class AdminAuthServer
@@ -17,7 +18,10 @@ class AdminAuthServer
         if (!$user || !password_verify($password, $user->password_hash)) {
             throw new InvalidArgumentException('用户名或密码错误');
         }
-        return $this->createMfaChallenge($user);
+        if ((bool) $user->mfa_enabled && $user->mfa_secret) {
+            return $this->createMfaChallenge($user);
+        }
+        return $this->createSession($user);
     }
 
     public function verifyMfa(string $challengeToken, string $code): array
@@ -36,21 +40,104 @@ class AdminAuthServer
         }
 
         $setupRequired = (bool) $challenge->setup_required;
-        $secret = $setupRequired ? (string) $challenge->mfa_secret : (string) $user->mfa_secret;
+        if ($setupRequired) {
+            throw new InvalidArgumentException('MFA 开启流程请在个人中心完成');
+        }
+        $secret = (string) $user->mfa_secret;
         if (!Totp::verify($secret, $code)) {
             throw new InvalidArgumentException('动态验证码错误');
         }
 
-        if ($setupRequired) {
-            $user->forceFill([
-                'mfa_secret' => $secret,
-                'mfa_enabled' => 1,
-                'mfa_enabled_at' => date('Y-m-d H:i:s'),
-            ])->save();
+        AdminMfaChallenge::query()->where('admin_user_id', $user->id)->delete();
+        return $this->createSession($user);
+    }
+
+    public function profile(AdminUser $user): array
+    {
+        return [
+            'username' => $user->username,
+            'mfaEnabled' => (bool) $user->mfa_enabled,
+            'mfaEnabledAt' => DateTimeFormatter::beijing($user->mfa_enabled_at),
+        ];
+    }
+
+    public function changePassword(AdminUser $user, string $oldPassword, string $newPassword): void
+    {
+        if (!password_verify($oldPassword, $user->password_hash)) {
+            throw new InvalidArgumentException('旧密码错误');
+        }
+        if (strlen($newPassword) < 8) {
+            throw new InvalidArgumentException('新密码至少需要 8 位');
+        }
+        $user->forceFill(['password_hash' => password_hash($newPassword, PASSWORD_DEFAULT)])->save();
+    }
+
+    public function startMfaSetup(AdminUser $user): array
+    {
+        if ((bool) $user->mfa_enabled && $user->mfa_secret) {
+            throw new InvalidArgumentException('MFA 已开启');
         }
 
         AdminMfaChallenge::query()->where('admin_user_id', $user->id)->delete();
-        return $this->createSession($user);
+        $challengeToken = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+        $secret = Totp::secret();
+        AdminMfaChallenge::query()->create([
+            'admin_user_id' => $user->id,
+            'token_hash' => hash('sha256', $challengeToken),
+            'mfa_secret' => $secret,
+            'setup_required' => 1,
+            'expires_at' => date('Y-m-d H:i:s', time() + 600),
+        ]);
+
+        return [
+            'challengeToken' => $challengeToken,
+            'secret' => $secret,
+            'otpauthUri' => Totp::otpauthUri($secret, $user->username),
+        ];
+    }
+
+    public function enableMfa(AdminUser $user, string $challengeToken, string $code): array
+    {
+        $challenge = AdminMfaChallenge::query()
+            ->where('admin_user_id', $user->id)
+            ->where('token_hash', hash('sha256', $challengeToken))
+            ->where('setup_required', 1)
+            ->where('expires_at', '>', date('Y-m-d H:i:s'))
+            ->first();
+        if (!$challenge) {
+            throw new InvalidArgumentException('MFA 绑定已过期，请重新生成密钥');
+        }
+        $secret = (string) $challenge->mfa_secret;
+        if (!Totp::verify($secret, $code)) {
+            throw new InvalidArgumentException('动态验证码错误');
+        }
+
+        $user->forceFill([
+            'mfa_secret' => $secret,
+            'mfa_enabled' => 1,
+            'mfa_enabled_at' => date('Y-m-d H:i:s'),
+        ])->save();
+        AdminMfaChallenge::query()->where('admin_user_id', $user->id)->delete();
+
+        return $this->profile($user->refresh());
+    }
+
+    public function disableMfa(AdminUser $user, string $code): array
+    {
+        if (!(bool) $user->mfa_enabled || !$user->mfa_secret) {
+            return $this->profile($user);
+        }
+        if (!Totp::verify((string) $user->mfa_secret, $code)) {
+            throw new InvalidArgumentException('动态验证码错误');
+        }
+        $user->forceFill([
+            'mfa_enabled' => 0,
+            'mfa_secret' => null,
+            'mfa_enabled_at' => null,
+        ])->save();
+        AdminMfaChallenge::query()->where('admin_user_id', $user->id)->delete();
+
+        return $this->profile($user->refresh());
     }
 
     public function createSession(AdminUser $user): array
@@ -92,28 +179,21 @@ class AdminAuthServer
     {
         AdminMfaChallenge::query()->where('admin_user_id', $user->id)->delete();
         $challengeToken = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
-        $setupRequired = !(bool) $user->mfa_enabled || !$user->mfa_secret;
-        $secret = $setupRequired ? Totp::secret() : null;
 
         AdminMfaChallenge::query()->create([
             'admin_user_id' => $user->id,
             'token_hash' => hash('sha256', $challengeToken),
-            'mfa_secret' => $secret,
-            'setup_required' => $setupRequired ? 1 : 0,
+            'mfa_secret' => null,
+            'setup_required' => 0,
             'expires_at' => date('Y-m-d H:i:s', time() + 600),
         ]);
 
         $data = [
             'mfaRequired' => true,
-            'mfaSetupRequired' => $setupRequired,
+            'mfaSetupRequired' => false,
             'challengeToken' => $challengeToken,
             'username' => $user->username,
         ];
-
-        if ($setupRequired) {
-            $data['secret'] = $secret;
-            $data['otpauthUri'] = Totp::otpauthUri($secret, $user->username);
-        }
 
         return $data;
     }

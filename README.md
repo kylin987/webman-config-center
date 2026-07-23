@@ -91,7 +91,9 @@ http://127.0.0.1:8787/
 curl http://127.0.0.1:8787/health
 ```
 
-第一次登录时，如果 `cc_admin_user` 表为空，系统会使用 `.env` 中的 `CONFIG_CENTER_BOOTSTRAP_USERNAME` 和 `CONFIG_CENTER_BOOTSTRAP_PASSWORD` 创建管理员账号。首次登录会要求绑定 MFA 验证器，绑定成功后才会进入后台。
+第一次登录时，如果 `cc_admin_user` 表为空，系统会使用 `.env` 中的 `CONFIG_CENTER_BOOTSTRAP_USERNAME` 和 `CONFIG_CENTER_BOOTSTRAP_PASSWORD` 创建管理员账号。
+
+MFA 二次验证默认不开启。管理员登录后台后，可在“个人中心”手动开启 MFA；开启后，该管理员后续登录需要输入验证器中的 6 位动态验证码。关闭 MFA 时也必须输入当前动态验证码。
 
 如果管理员丢失验证器，需要在可信环境中手动重置 MFA：
 
@@ -104,7 +106,7 @@ DELETE FROM cc_admin_mfa_challenge
 WHERE admin_user_id = (SELECT id FROM cc_admin_user WHERE username = 'admin');
 ```
 
-重置后，该管理员下次登录会重新绑定 MFA。
+重置后，该管理员会回到未开启 MFA 状态，可在个人中心重新开启。
 
 ## Docker 运行
 

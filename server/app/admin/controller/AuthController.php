@@ -33,4 +33,54 @@ class AuthController
         (new AdminAuthServer())->logout(str_starts_with($header, 'Bearer ') ? substr($header, 7) : '');
         return json(['code' => 0]);
     }
+
+    public function profile(Request $request): Response
+    {
+        return json(['code' => 0, 'data' => (new AdminAuthServer())->profile($request->attribute('admin_user'))]);
+    }
+
+    public function changePassword(Request $request): Response
+    {
+        try {
+            (new AdminAuthServer())->changePassword(
+                $request->attribute('admin_user'),
+                (string) $request->post('oldPassword'),
+                (string) $request->post('newPassword')
+            );
+            return json(['code' => 0]);
+        } catch (InvalidArgumentException $exception) {
+            return json(['code' => 400, 'message' => $exception->getMessage()])->withStatus(400);
+        }
+    }
+
+    public function startMfaSetup(Request $request): Response
+    {
+        try {
+            return json(['code' => 0, 'data' => (new AdminAuthServer())->startMfaSetup($request->attribute('admin_user'))]);
+        } catch (InvalidArgumentException $exception) {
+            return json(['code' => 400, 'message' => $exception->getMessage()])->withStatus(400);
+        }
+    }
+
+    public function enableMfa(Request $request): Response
+    {
+        try {
+            return json(['code' => 0, 'data' => (new AdminAuthServer())->enableMfa(
+                $request->attribute('admin_user'),
+                (string) $request->post('challengeToken'),
+                (string) $request->post('code')
+            )]);
+        } catch (InvalidArgumentException $exception) {
+            return json(['code' => 400, 'message' => $exception->getMessage()])->withStatus(400);
+        }
+    }
+
+    public function disableMfa(Request $request): Response
+    {
+        try {
+            return json(['code' => 0, 'data' => (new AdminAuthServer())->disableMfa($request->attribute('admin_user'), (string) $request->post('code'))]);
+        } catch (InvalidArgumentException $exception) {
+            return json(['code' => 400, 'message' => $exception->getMessage()])->withStatus(400);
+        }
+    }
 }

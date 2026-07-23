@@ -10,6 +10,11 @@ Route::post('/api/admin/v1/auth/login', [AuthController::class, 'login']);
 Route::post('/api/admin/v1/auth/mfa/verify', [AuthController::class, 'verifyMfa']);
 Route::group('/api/admin/v1', function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::get('/profile', [AuthController::class, 'profile']);
+    Route::post('/profile/password', [AuthController::class, 'changePassword']);
+    Route::post('/profile/mfa/setup', [AuthController::class, 'startMfaSetup']);
+    Route::post('/profile/mfa/enable', [AuthController::class, 'enableMfa']);
+    Route::post('/profile/mfa/disable', [AuthController::class, 'disableMfa']);
     Route::get('/config', [ConfigController::class, 'index']);
     Route::get('/config/detail', [ConfigController::class, 'show']);
     Route::get('/config/history', [ConfigController::class, 'history']);

@@ -66,6 +66,12 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .account-modal-card{width:min(560px,calc(100vw - 42px));height:auto;grid-template-rows:auto 1fr auto}
 .account-modal-body{padding:18px;background:#fbfdff}
 .account-modal-body .field{margin:0 0 14px}
+.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.profile-card{padding:18px}
+.profile-card h2{font-size:15px;margin:0 0 14px;color:#111827}
+.profile-card p{margin:7px 0;color:var(--muted);line-height:1.65}
+.profile-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.profile-secret{padding:10px;border:1px dashed #91caff;border-radius:8px;background:#fff;color:#0958d9;word-break:break-all;font-family:"SFMono-Regular",Consolas,monospace;font-size:13px}
 .modal-title{font-size:16px;font-weight:650;padding-left:22px;position:relative}
 .modal-title:before{content:"";position:absolute;left:0;top:50%;width:4px;height:18px;border-radius:99px;background:var(--accent);transform:translateY(-50%)}
 .status{min-height:20px;color:var(--muted);margin-top:10px}
@@ -102,6 +108,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .modal-status{color:var(--muted)}
 .editor-actions{display:flex;gap:8px}
 @media(max-width:900px){.shell{grid-template-columns:1fr}.nav{position:sticky;top:0;z-index:2}.content{padding:16px}.editor-fields{grid-template-columns:1fr}.page-head{align-items:flex-start;flex-direction:column}.modal{padding:10px}.modal-card{width:100%;height:calc(100vh - 20px)}.account-modal-card{height:auto}.file-name strong{font-size:16px}}
+@media(max-width:900px){.profile-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -136,6 +143,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
       <div class="menu">
         <button id="navConfig" class="active">配置管理</button>
         <button id="navAccount">客户端账号</button>
+        <button id="navProfile">个人中心</button>
       </div>
       <div class="nav-foot">
         <button class="secondary" id="logout">退出登录</button>
@@ -170,6 +178,44 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
           <div id="accountEmpty" class="empty hidden">暂无客户端账号</div>
         </div>
         <div class="status" id="accountStatus"></div>
+      </section>
+      <section id="profilePage" class="hidden">
+        <div class="page-head">
+          <div><h1>个人中心</h1><p>管理当前管理员账号、安全密码和 MFA 二次验证。</p></div>
+          <div class="toolbar"><button class="secondary" id="refreshProfile">刷新</button></div>
+        </div>
+        <div class="profile-grid">
+          <div class="panel profile-card">
+            <h2>账号资料</h2>
+            <p>用户名：<b id="profileUsername">-</b></p>
+            <p>MFA 状态：<span id="profileMfaStatus" class="tag off">未开启</span></p>
+            <p id="profileMfaTime">开启时间：-</p>
+          </div>
+          <div class="panel profile-card">
+            <h2>修改密码</h2>
+            <div class="field"><label>旧密码</label><input id="oldPassword" type="password" autocomplete="current-password"></div>
+            <div class="field"><label>新密码</label><input id="newPassword" type="password" autocomplete="new-password" placeholder="至少 8 位"></div>
+            <div class="field"><label>确认新密码</label><input id="confirmPassword" type="password" autocomplete="new-password"></div>
+            <div class="profile-actions"><button id="changePassword">修改密码</button></div>
+          </div>
+          <div class="panel profile-card">
+            <h2>MFA 二次验证</h2>
+            <p>默认不开启。开启后，管理员登录时需要额外输入验证器里的 6 位动态验证码。</p>
+            <div id="mfaSetupProfile" class="hidden">
+              <p>请在验证器中手动添加下面的密钥，然后输入动态验证码完成开启。</p>
+              <div class="profile-secret" id="profileMfaSecret"></div>
+              <p class="mono" id="profileMfaUri"></p>
+              <div class="field"><label>动态验证码</label><input id="profileMfaEnableCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></div>
+              <div class="profile-actions"><button id="enableMfa">确认开启 MFA</button><button class="secondary" id="cancelMfaSetup">取消</button></div>
+            </div>
+            <div id="mfaDisabledActions" class="profile-actions"><button id="startMfaSetup">开启 MFA</button></div>
+            <div id="mfaEnabledActions" class="hidden">
+              <div class="field"><label>关闭 MFA 需要输入动态验证码</label><input id="profileMfaDisableCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></div>
+              <div class="profile-actions"><button class="danger" id="disableMfa">关闭 MFA</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="status" id="profileStatus"></div>
       </section>
     </main>
   </div>
@@ -284,6 +330,8 @@ let editingAccountId = null;
 let toastTimer = null;
 let confirmResolver = null;
 let mfaChallengeToken = '';
+let profileCache = null;
+let profileMfaChallengeToken = '';
 
 function initEditor() {
   if (editor || !window.ace) return;
@@ -366,10 +414,14 @@ function showApp(username = '') {
 
 function showPage(page) {
   const isConfig = page === 'config';
+  const isAccount = page === 'account';
+  const isProfile = page === 'profile';
   $('configPage').classList.toggle('hidden', !isConfig);
-  $('accountPage').classList.toggle('hidden', isConfig);
+  $('accountPage').classList.toggle('hidden', !isAccount);
+  $('profilePage').classList.toggle('hidden', !isProfile);
   $('navConfig').classList.toggle('active', isConfig);
-  $('navAccount').classList.toggle('active', !isConfig);
+  $('navAccount').classList.toggle('active', isAccount);
+  $('navProfile').classList.toggle('active', isProfile);
 }
 
 function setStatus(text, error = false) {
@@ -400,6 +452,11 @@ function setAccountStatus(text, error = false) {
 function setAccountModalStatus(text, error = false) {
   $('accountModalStatus').textContent = text;
   $('accountModalStatus').className = 'modal-status ' + (error ? 'error' : '');
+}
+
+function setProfileStatus(text, error = false) {
+  $('profileStatus').textContent = text;
+  $('profileStatus').className = 'status ' + (error ? 'error' : '');
 }
 
 function showToast(text, error = false) {
@@ -759,6 +816,108 @@ async function disableAccount(id) {
   }
 }
 
+async function loadProfile() {
+  profileCache = await api('/api/admin/v1/profile');
+  $('profileUsername').textContent = profileCache.username || '-';
+  $('profileMfaStatus').textContent = profileCache.mfaEnabled ? '已开启' : '未开启';
+  $('profileMfaStatus').className = 'tag ' + (profileCache.mfaEnabled ? '' : 'off');
+  $('profileMfaTime').textContent = '开启时间：' + (profileCache.mfaEnabledAt || '-');
+  $('mfaDisabledActions').classList.toggle('hidden', !!profileCache.mfaEnabled);
+  $('mfaEnabledActions').classList.toggle('hidden', !profileCache.mfaEnabled);
+  if (profileCache.mfaEnabled) {
+    cancelProfileMfaSetup();
+  }
+  setProfileStatus('');
+}
+
+async function changeProfilePassword() {
+  const oldPassword = $('oldPassword').value;
+  const newPassword = $('newPassword').value;
+  const confirmPassword = $('confirmPassword').value;
+  if (newPassword !== confirmPassword) {
+    setProfileStatus('两次输入的新密码不一致', true);
+    return;
+  }
+  try {
+    await api('/api/admin/v1/profile/password', {method: 'POST', body: {oldPassword, newPassword}});
+    $('oldPassword').value = '';
+    $('newPassword').value = '';
+    $('confirmPassword').value = '';
+    setProfileStatus('');
+    showToast('密码已修改');
+  } catch (error) {
+    setProfileStatus(error.message, true);
+    showToast(error.message, true);
+  }
+}
+
+async function startProfileMfaSetup() {
+  try {
+    const data = await api('/api/admin/v1/profile/mfa/setup', {method: 'POST', body: {}});
+    profileMfaChallengeToken = data.challengeToken || '';
+    $('profileMfaSecret').textContent = data.secret || '';
+    $('profileMfaUri').textContent = data.otpauthUri || '';
+    $('profileMfaEnableCode').value = '';
+    $('mfaSetupProfile').classList.remove('hidden');
+    $('mfaDisabledActions').classList.add('hidden');
+    setProfileStatus('');
+    setTimeout(() => $('profileMfaEnableCode').focus(), 0);
+  } catch (error) {
+    setProfileStatus(error.message, true);
+    showToast(error.message, true);
+  }
+}
+
+function cancelProfileMfaSetup() {
+  profileMfaChallengeToken = '';
+  $('profileMfaSecret').textContent = '';
+  $('profileMfaUri').textContent = '';
+  $('profileMfaEnableCode').value = '';
+  $('mfaSetupProfile').classList.add('hidden');
+  if (!profileCache?.mfaEnabled) {
+    $('mfaDisabledActions').classList.remove('hidden');
+  }
+}
+
+async function enableProfileMfa() {
+  try {
+    profileCache = await api('/api/admin/v1/profile/mfa/enable', {
+      method: 'POST',
+      body: {
+        challengeToken: profileMfaChallengeToken,
+        code: $('profileMfaEnableCode').value,
+      }
+    });
+    cancelProfileMfaSetup();
+    await loadProfile();
+    showToast('MFA 已开启');
+  } catch (error) {
+    setProfileStatus(error.message, true);
+    showToast(error.message, true);
+  }
+}
+
+async function disableProfileMfa() {
+  const confirmed = await confirmAction(
+    '关闭 MFA',
+    '确认关闭 MFA 二次验证吗？关闭前需要校验当前动态验证码。',
+    '关闭 MFA'
+  );
+  if (!confirmed) return;
+  try {
+    profileCache = await api('/api/admin/v1/profile/mfa/disable', {
+      method: 'POST',
+      body: {code: $('profileMfaDisableCode').value}
+    });
+    $('profileMfaDisableCode').value = '';
+    await loadProfile();
+    showToast('MFA 已关闭');
+  } catch (error) {
+    setProfileStatus(error.message, true);
+    showToast(error.message, true);
+  }
+}
+
 function resetLoginMfa() {
   mfaChallengeToken = '';
   $('mfaPanel').classList.add('hidden');
@@ -824,13 +983,20 @@ $('loginForm').onsubmit = async event => {
 
 $('navConfig').onclick = () => {showPage('config'); loadConfigs().catch(error => setStatus(error.message, true));};
 $('navAccount').onclick = () => {showPage('account'); loadAccounts().catch(error => setAccountStatus(error.message, true));};
+$('navProfile').onclick = () => {showPage('profile'); loadProfile().catch(error => setProfileStatus(error.message, true));};
 $('refreshConfig').onclick = () => loadConfigs().catch(error => setStatus(error.message, true));
 $('refreshAccount').onclick = () => loadAccounts().catch(error => setAccountStatus(error.message, true));
+$('refreshProfile').onclick = () => loadProfile().catch(error => setProfileStatus(error.message, true));
 $('newConfig').onclick = newConfig;
 $('newAccount').onclick = () => openAccountModal();
 $('publish').onclick = publishConfig;
 $('reloadConfig').onclick = () => current?.revision && openConfig($('group').value, $('dataId').value);
 $('saveAccount').onclick = saveAccount;
+$('changePassword').onclick = changeProfilePassword;
+$('startMfaSetup').onclick = startProfileMfaSetup;
+$('cancelMfaSetup').onclick = cancelProfileMfaSetup;
+$('enableMfa').onclick = enableProfileMfa;
+$('disableMfa').onclick = disableProfileMfa;
 $('closeConfigModal').onclick = closeConfigModal;
 $('closeDetailModal').onclick = closeDetailModal;
 $('closeDetailModalFooter').onclick = closeDetailModal;
