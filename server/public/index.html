@@ -47,6 +47,11 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .menu button.active{background:var(--accent-soft);color:var(--accent);font-weight:600;box-shadow:none}
 .menu button.active:before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:99px;background:var(--accent)}
 .nav-foot{margin-top:auto;padding:0 8px;display:grid;gap:10px;color:#9ca3af;font-size:12px}
+.profile-entry{width:100%;display:grid;grid-template-columns:32px 1fr;gap:10px;align-items:center;text-align:left;background:#fbfdff;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px;box-shadow:none}
+.profile-entry:hover{background:#f8fbff;border-color:#bae0ff;color:var(--accent);box-shadow:0 8px 20px rgba(22,119,255,.08)}
+.profile-avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-weight:700}
+.profile-entry strong{display:block;font-size:13px;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.profile-entry span{display:block;margin-top:2px;color:var(--muted);font-size:12px}
 .content{padding:28px;min-width:0}
 .page-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}
 .page-head h1{font-size:22px;margin:0;color:#0f172a;font-weight:650}
@@ -151,10 +156,12 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
       <div class="menu">
         <button id="navConfig" class="active">配置管理</button>
         <button id="navAccount">客户端账号</button>
-        <button id="navProfile">个人中心</button>
       </div>
       <div class="nav-foot">
-        <button class="secondary" id="logout">退出登录</button>
+        <button class="profile-entry" id="profileEntry">
+          <span class="profile-avatar" id="profileAvatar">A</span>
+          <span><strong id="profileEntryName">admin</strong><span>个人中心</span></span>
+        </button>
         <span>Webman lightweight config service</span>
       </div>
     </aside>
@@ -190,7 +197,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
       <section id="profilePage" class="hidden">
         <div class="page-head">
           <div><h1>个人中心</h1><p>管理当前管理员账号、安全密码和 MFA 二次验证。</p></div>
-          <div class="toolbar"><button class="secondary" id="refreshProfile">刷新</button></div>
+          <div class="toolbar"><button class="secondary" id="refreshProfile">刷新</button><button class="danger" id="logout">退出登录</button></div>
         </div>
         <div class="profile-grid">
           <div class="panel profile-card">
@@ -444,7 +451,13 @@ async function api(path, opt = {}) {
 }
 
 function showApp(username = '') {
-  $('who').textContent = username ? '已登录：' + username : '已登录';
+  const displayName = username || localStorage.ccAdminUsername || 'admin';
+  if (username) {
+    localStorage.ccAdminUsername = username;
+  }
+  $('who').textContent = '已登录';
+  $('profileEntryName').textContent = displayName;
+  $('profileAvatar').textContent = (displayName || 'A').slice(0, 1).toUpperCase();
   $('login').style.display = 'none';
   $('app').style.display = 'block';
 }
@@ -458,7 +471,6 @@ function showPage(page) {
   $('profilePage').classList.toggle('hidden', !isProfile);
   $('navConfig').classList.toggle('active', isConfig);
   $('navAccount').classList.toggle('active', isAccount);
-  $('navProfile').classList.toggle('active', isProfile);
 }
 
 function setStatus(text, error = false) {
@@ -1131,7 +1143,7 @@ $('loginForm').onsubmit = async event => {
 
 $('navConfig').onclick = () => {showPage('config'); loadConfigs().catch(error => setStatus(error.message, true));};
 $('navAccount').onclick = () => {showPage('account'); loadAccounts().catch(error => setAccountStatus(error.message, true));};
-$('navProfile').onclick = () => {showPage('profile'); loadProfile().catch(error => setProfileStatus(error.message, true));};
+$('profileEntry').onclick = () => {showPage('profile'); loadProfile().catch(error => setProfileStatus(error.message, true));};
 $('refreshConfig').onclick = () => loadConfigs().catch(error => setStatus(error.message, true));
 $('refreshAccount').onclick = () => loadAccounts().catch(error => setAccountStatus(error.message, true));
 $('refreshProfile').onclick = () => loadProfile().catch(error => setProfileStatus(error.message, true));
@@ -1164,7 +1176,7 @@ $('confirmOk').onclick = () => closeConfirmModal(true);
 $('resetLogin').onclick = resetLoginMfa;
 $('format').onchange = setEditorMode;
 $('dataId').oninput = () => {$('modalFileName').textContent = $('dataId').value || 'new.php';};
-$('logout').onclick = () => {localStorage.removeItem('ccAdminSession'); location.reload();};
+$('logout').onclick = () => {localStorage.removeItem('ccAdminSession'); localStorage.removeItem('ccAdminUsername'); location.reload();};
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape') {
     if (!$('confirmModal').classList.contains('hidden')) return closeConfirmModal(false);
