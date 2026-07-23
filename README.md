@@ -2,11 +2,9 @@
 
 轻量配置中心服务端。
 
-本仓库只包含配置中心服务端：管理后台、客户端读取 API、MySQL 表结构和 K8s 部署模板。客户端 Composer 包在独立仓库维护：
+本仓库只包含配置中心服务端：管理后台、客户端读取 API、MySQL 表结构和 K8s 部署模板。
 
-```text
-git@github.com:kylin987/webman-config-center-client.git
-```
+配套客户端 Composer 包仓库：[kylin987/webman-config-center-client](https://github.com/kylin987/webman-config-center-client)
 
 ## 功能
 
@@ -169,11 +167,7 @@ GET /api/client/v1/config?namespace=public&group=DEFAULT_GROUP&dataId=app.php
 composer require kylin987/webman-config-center-client
 ```
 
-客户端仓库：
-
-```text
-git@github.com:kylin987/webman-config-center-client.git
-```
+客户端仓库：[kylin987/webman-config-center-client](https://github.com/kylin987/webman-config-center-client)
 
 ## 注意
 
