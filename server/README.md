@@ -23,6 +23,14 @@ mysql -h127.0.0.1 -P3306 -u config_center -p config_center < ../sql/001_config_c
 mysql -h127.0.0.1 -P3306 -u config_center -p config_center < ../sql/002_admin_session.sql
 ```
 
+老版本数据库升级需要额外执行：
+
+```bash
+mysql -h127.0.0.1 -P3306 -u config_center -p config_center < ../sql/003_admin_mfa.sql
+```
+
+管理员丢失验证器时，可参考根目录 README 中的 MFA 重置 SQL。
+
 访问：
 
 ```text

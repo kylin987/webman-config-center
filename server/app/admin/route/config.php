@@ -7,6 +7,7 @@ use app\admin\middleware\AdminAuthMiddleware;
 use Webman\Route;
 
 Route::post('/api/admin/v1/auth/login', [AuthController::class, 'login']);
+Route::post('/api/admin/v1/auth/mfa/verify', [AuthController::class, 'verifyMfa']);
 Route::group('/api/admin/v1', function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/config', [ConfigController::class, 'index']);

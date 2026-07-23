@@ -29,6 +29,13 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .login-card p{color:var(--muted);margin:6px 0 24px}
 .field{display:grid;gap:7px;margin:12px 0}
 .field label{font-size:12px;color:var(--muted)}
+.mfa-panel{margin-top:18px;padding:14px;border:1px solid #d6e4ff;border-radius:10px;background:#f8fbff;display:grid;gap:10px}
+.mfa-panel h3{margin:0;color:#0f172a;font-size:15px}
+.mfa-panel p{margin:0;color:var(--muted);line-height:1.65}
+.mfa-secret{padding:10px;border:1px dashed #91caff;border-radius:8px;background:#fff;color:#0958d9;word-break:break-all;font-family:"SFMono-Regular",Consolas,monospace;font-size:13px}
+.login-actions{display:flex;gap:8px;align-items:center;margin-top:12px}
+.login-actions button{flex:1}
+.login-actions button.secondary{flex:0 0 auto}
 #app{display:none;min-height:100vh}
 .shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
 .nav{background:var(--nav);color:var(--ink);padding:22px 14px;display:flex;flex-direction:column;gap:18px;border-right:1px solid var(--line);box-shadow:4px 0 18px rgba(15,23,42,.03)}
@@ -105,7 +112,20 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
     <p>轻量配置管理</p>
     <div class="field"><label>用户名</label><input name="username" value="admin" autocomplete="username" required></div>
     <div class="field"><label>密码</label><input name="password" type="password" autocomplete="current-password" required></div>
-    <button type="submit">登录</button>
+    <div id="mfaPanel" class="mfa-panel hidden">
+      <h3 id="mfaTitle">二次验证</h3>
+      <p id="mfaHelp">请输入验证器中的 6 位动态验证码。</p>
+      <div id="mfaSetup" class="hidden">
+        <p>首次登录需要先绑定验证器。请在 Google Authenticator、1Password、Microsoft Authenticator 等应用中手动添加下面的密钥。</p>
+        <div class="mfa-secret" id="mfaSecret"></div>
+        <p class="mono" id="mfaUri"></p>
+      </div>
+      <div class="field"><label>动态验证码</label><input id="mfaCode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="6 位数字"></div>
+    </div>
+    <div class="login-actions">
+      <button type="submit" id="loginSubmit">登录</button>
+      <button type="button" class="secondary hidden" id="resetLogin">返回</button>
+    </div>
     <div class="status" id="loginStatus"></div>
   </form>
 </section>
@@ -263,6 +283,7 @@ let accountCache = new Map();
 let editingAccountId = null;
 let toastTimer = null;
 let confirmResolver = null;
+let mfaChallengeToken = '';
 
 function initEditor() {
   if (editor || !window.ace) return;
@@ -738,22 +759,64 @@ async function disableAccount(id) {
   }
 }
 
+function resetLoginMfa() {
+  mfaChallengeToken = '';
+  $('mfaPanel').classList.add('hidden');
+  $('mfaSetup').classList.add('hidden');
+  $('mfaSecret').textContent = '';
+  $('mfaUri').textContent = '';
+  $('mfaCode').value = '';
+  $('loginSubmit').textContent = '登录';
+  $('resetLogin').classList.add('hidden');
+  $('loginStatus').textContent = '';
+}
+
+async function finishAdminLogin(data) {
+  adminSession = data.token;
+  localStorage.ccAdminSession = adminSession;
+  resetLoginMfa();
+  showApp(data.username);
+  showPage('config');
+  await loadConfigs();
+}
+
+function showMfaChallenge(data) {
+  mfaChallengeToken = data.challengeToken || '';
+  $('mfaPanel').classList.remove('hidden');
+  $('mfaSetup').classList.toggle('hidden', !data.mfaSetupRequired);
+  $('mfaTitle').textContent = data.mfaSetupRequired ? '绑定 MFA 验证器' : '二次验证';
+  $('mfaHelp').textContent = data.mfaSetupRequired
+    ? '绑定后输入验证器生成的 6 位动态验证码，验证通过后进入后台。'
+    : '请输入验证器中的 6 位动态验证码。';
+  $('mfaSecret').textContent = data.secret || '';
+  $('mfaUri').textContent = data.otpauthUri || '';
+  $('mfaCode').value = '';
+  $('loginSubmit').textContent = data.mfaSetupRequired ? '绑定并登录' : '验证并登录';
+  $('resetLogin').classList.remove('hidden');
+  $('loginStatus').textContent = '';
+  setTimeout(() => $('mfaCode').focus(), 0);
+}
+
 $('loginForm').onsubmit = async event => {
   event.preventDefault();
   const form = new FormData(event.target);
   try {
-    const response = await fetch('/api/admin/v1/auth/login', {
+    const path = mfaChallengeToken ? '/api/admin/v1/auth/mfa/verify' : '/api/admin/v1/auth/login';
+    const payload = mfaChallengeToken
+      ? {challengeToken: mfaChallengeToken, code: $('mfaCode').value}
+      : Object.fromEntries(form);
+    const response = await fetch(path, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(Object.fromEntries(form))
+      body: JSON.stringify(payload)
     });
     const body = await response.json();
     if (!response.ok || body.code !== 0) throw Error(body.message || '登录失败');
-    adminSession = body.data.token;
-    localStorage.ccAdminSession = adminSession;
-    showApp(body.data.username);
-    showPage('config');
-    await loadConfigs();
+    if (body.data?.mfaRequired) {
+      showMfaChallenge(body.data);
+      return;
+    }
+    await finishAdminLogin(body.data);
   } catch (error) {
     $('loginStatus').textContent = error.message;
   }
@@ -779,6 +842,7 @@ $('cancelAccount').onclick = closeAccountModal;
 $('confirmClose').onclick = () => closeConfirmModal(false);
 $('confirmCancel').onclick = () => closeConfirmModal(false);
 $('confirmOk').onclick = () => closeConfirmModal(true);
+$('resetLogin').onclick = resetLoginMfa;
 $('format').onchange = setEditorMode;
 $('dataId').oninput = () => {$('modalFileName').textContent = $('dataId').value || 'new.php';};
 $('logout').onclick = () => {localStorage.removeItem('ccAdminSession'); location.reload();};

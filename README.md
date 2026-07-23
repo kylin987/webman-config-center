@@ -69,6 +69,12 @@ mysql -h127.0.0.1 -P3306 -u config_center -p config_center < ../sql/001_config_c
 mysql -h127.0.0.1 -P3306 -u config_center -p config_center < ../sql/002_admin_session.sql
 ```
 
+老版本数据库升级需要额外执行：
+
+```bash
+mysql -h127.0.0.1 -P3306 -u config_center -p config_center < ../sql/003_admin_mfa.sql
+```
+
 启动服务：
 
 ```bash
@@ -87,7 +93,20 @@ http://127.0.0.1:8787/
 curl http://127.0.0.1:8787/health
 ```
 
-第一次登录时，如果 `cc_admin_user` 表为空，系统会使用 `.env` 中的 `CONFIG_CENTER_BOOTSTRAP_USERNAME` 和 `CONFIG_CENTER_BOOTSTRAP_PASSWORD` 创建管理员账号。登录后建议在生产环境妥善保存该密码。
+第一次登录时，如果 `cc_admin_user` 表为空，系统会使用 `.env` 中的 `CONFIG_CENTER_BOOTSTRAP_USERNAME` 和 `CONFIG_CENTER_BOOTSTRAP_PASSWORD` 创建管理员账号。首次登录会要求绑定 MFA 验证器，绑定成功后才会进入后台。
+
+如果管理员丢失验证器，需要在可信环境中手动重置 MFA：
+
+```sql
+UPDATE cc_admin_user
+SET mfa_enabled = 0, mfa_secret = NULL, mfa_enabled_at = NULL
+WHERE username = 'admin';
+
+DELETE FROM cc_admin_mfa_challenge
+WHERE admin_user_id = (SELECT id FROM cc_admin_user WHERE username = 'admin');
+```
+
+重置后，该管理员下次登录会重新绑定 MFA。
 
 ## Docker 运行
 
