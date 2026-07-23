@@ -97,4 +97,14 @@ class ConfigController
             return json(['code' => 400, 'message' => $exception->getMessage()])->withStatus(400);
         }
     }
+
+    public function delete(Request $request): Response
+    {
+        try {
+            (new ConfigPublishServer())->delete($request->post(), $request->attribute('admin_user')->username);
+            return json(['code' => 0]);
+        } catch (InvalidArgumentException $exception) {
+            return json(['code' => 400, 'message' => $exception->getMessage()])->withStatus(400);
+        }
+    }
 }

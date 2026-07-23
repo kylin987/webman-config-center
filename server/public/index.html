@@ -422,6 +422,7 @@ async function loadConfigs() {
       <button class="secondary small" data-detail-config="${configKey(row.group, row.dataId)}">详情</button>
       <button class="secondary small" data-open-config="${configKey(row.group, row.dataId)}">编辑</button>
       <button class="secondary small" data-history-config="${configKey(row.group, row.dataId)}">历史版本</button>
+      <button class="danger small" data-delete-config="${configKey(row.group, row.dataId)}">删除</button>
     </td>
   </tr>`).join('');
   $('configEmpty').classList.toggle('hidden', rows.length > 0);
@@ -441,6 +442,12 @@ async function loadConfigs() {
     button.onclick = () => {
       const [group, dataId] = decodeConfigKey(button.dataset.historyConfig);
       openHistoryModal(group, dataId);
+    };
+  });
+  document.querySelectorAll('[data-delete-config]').forEach(button => {
+    button.onclick = () => {
+      const [group, dataId] = decodeConfigKey(button.dataset.deleteConfig);
+      deleteConfig(group, dataId);
     };
   });
 }
@@ -627,6 +634,32 @@ async function publishHistoryVersion(historyId) {
   } catch (error) {
     setHistoryStatus(error.message, true);
     setDetailStatus(error.message, true);
+    showToast(error.message, true);
+  }
+}
+
+async function deleteConfig(group, dataId) {
+  const config = configCache.get(configKey(group, dataId));
+  const confirmed = await confirmAction(
+    '删除配置',
+    `确认删除配置「${dataId}」吗？删除后客户端将无法再从配置中心读取该配置，历史版本会保留。`,
+    '删除配置'
+  );
+  if (!confirmed) return;
+  try {
+    await api('/api/admin/v1/config/delete', {
+      method: 'POST',
+      body: {
+        namespace: config?.namespace || 'public',
+        group,
+        dataId,
+        expectedRevision: config?.revision || undefined,
+      }
+    });
+    await loadConfigs();
+    showToast('配置已删除');
+  } catch (error) {
+    setStatus(error.message, true);
     showToast(error.message, true);
   }
 }

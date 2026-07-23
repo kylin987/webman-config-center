@@ -74,6 +74,36 @@ class ConfigPublishServer
         });
     }
 
+    public function delete(array $params, string $operator): void
+    {
+        $namespace = $params['namespace'] ?: config('config-center.default_namespace');
+        $group = trim((string) ($params['group'] ?? ''));
+        $dataId = trim((string) ($params['dataId'] ?? ''));
+        $expectedRevision = $params['expectedRevision'] ?? null;
+
+        if ($group === '' || $dataId === '') {
+            throw new InvalidArgumentException('group 和 dataId 为必填项');
+        }
+
+        Db::transaction(function () use ($namespace, $group, $dataId, $expectedRevision) {
+            $item = ConfigItem::query()->where([
+                'namespace' => $namespace,
+                'config_group' => $group,
+                'data_id' => $dataId,
+            ])->lockForUpdate()->first();
+
+            if (!$item) {
+                throw new InvalidArgumentException('配置不存在或已被删除');
+            }
+
+            if ($expectedRevision !== null && (int) $expectedRevision !== (int) $item->revision) {
+                throw new InvalidArgumentException('配置已被其他发布覆盖，请刷新后重试');
+            }
+
+            $item->delete();
+        });
+    }
+
     private function uuid(): string
     {
         $bytes = random_bytes(16);
