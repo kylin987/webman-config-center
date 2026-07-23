@@ -2,7 +2,7 @@
 
 轻量配置中心服务端。
 
-本仓库只包含配置中心服务端：管理后台、客户端读取 API、MySQL 表结构和 K8s 部署模板。
+本仓库只包含配置中心服务端：管理后台、客户端读取 API、MySQL 表结构和 Docker 运行文件。
 
 配套客户端 Composer 包仓库：[kylin987/webman-config-center-client](https://github.com/kylin987/webman-config-center-client)
 
@@ -18,10 +18,10 @@
 ## 目录
 
 ```text
-server/                  Webman 服务端项目
+app/                     Webman 应用代码
+config/                  Webman 配置
+public/                  后台静态页面和前端依赖
 sql/                     MySQL 初始化 SQL
-k8s/config-center.yaml   K8s 部署模板
-docs/                    设计和实现说明
 ```
 
 ## 本地运行
@@ -33,15 +33,14 @@ docs/                    设计和实现说明
 - MySQL 5.7+/8.0+
 - Redis
 
-进入服务端目录：
+进入项目目录：
 
 ```bash
-cd server
 composer install
 cp .env.example .env
 ```
 
-修改 `server/.env`：
+修改 `.env`：
 
 ```dotenv
 MYSQL_HOST=127.0.0.1
@@ -64,14 +63,14 @@ WEBMAN_HTTP_WORKERS=2
 初始化数据库：
 
 ```bash
-mysql -h127.0.0.1 -P3306 -u config_center -p config_center < ../sql/001_config_center.sql
-mysql -h127.0.0.1 -P3306 -u config_center -p config_center < ../sql/002_admin_session.sql
+mysql -h127.0.0.1 -P3306 -u config_center -p config_center < sql/001_config_center.sql
+mysql -h127.0.0.1 -P3306 -u config_center -p config_center < sql/002_admin_session.sql
 ```
 
 老版本数据库升级需要额外执行：
 
 ```bash
-mysql -h127.0.0.1 -P3306 -u config_center -p config_center < ../sql/003_admin_mfa.sql
+mysql -h127.0.0.1 -P3306 -u config_center -p config_center < sql/003_admin_mfa.sql
 ```
 
 启动服务：
@@ -127,46 +126,11 @@ WHERE admin_user_id = (SELECT id FROM cc_admin_user WHERE username = 'admin');
 ## Docker 运行
 
 ```bash
-cd server
 docker build -t webman-config-center:latest .
 docker run -d --name webman-config-center \
   --env-file .env \
   -p 8787:8787 \
   webman-config-center:latest
-```
-
-## K8s 部署
-
-1. 构建并推送镜像。
-2. 修改 `k8s/config-center.yaml` 里的镜像地址。
-3. 创建运行 Secret。
-
-示例：
-
-```bash
-kubectl create namespace config-center
-
-kubectl -n config-center create secret generic config-center-runtime \
-  --from-literal=MYSQL_HOST='your-mysql-host' \
-  --from-literal=MYSQL_PORT='3306' \
-  --from-literal=MYSQL_DATABASE='config_center' \
-  --from-literal=MYSQL_USERNAME='config_center' \
-  --from-literal=MYSQL_PASSWORD='your-password' \
-  --from-literal=REDIS_HOST='your-redis-host' \
-  --from-literal=REDIS_PORT='6379' \
-  --from-literal=REDIS_DATABASE='0' \
-  --from-literal=REDIS_PASSWORD='' \
-  --from-literal=CONFIG_CENTER_BOOTSTRAP_USERNAME='admin' \
-  --from-literal=CONFIG_CENTER_BOOTSTRAP_PASSWORD='replace-with-a-random-secret'
-
-kubectl apply -f k8s/config-center.yaml
-```
-
-查看状态：
-
-```bash
-kubectl -n config-center get pods
-kubectl -n config-center logs deploy/config-center
 ```
 
 ## 客户端读取 API
@@ -189,7 +153,7 @@ composer require kylin987/webman-config-center-client
 
 ## 注意
 
-- 不要提交 `server/.env`。
+- 不要提交 `.env`。
 - Redis 只用于变更通知，配置权威数据在 MySQL。
 - 如果 Redis 短暂不可用，配置发布仍会写入 MySQL，outbox 进程会继续重试广播。
-- 默认资源占用较低，K8s 可从 `100m CPU / 128Mi memory` request 起步。
+- 默认资源占用较低，生产环境可按实际流量配置较小 CPU/内存规格起步。

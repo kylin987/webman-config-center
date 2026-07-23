@@ -1,8 +1,8 @@
-.DS_Store
+/runtime
+/.idea
+/.vscode
+/vendor
+*.log
 .env
-.idea/
-.vscode/
-server/vendor/
-server/runtime/
-packages/
-packages/*/vendor/
+/tests/tmp
+/tests/.phpunit.result.cache
