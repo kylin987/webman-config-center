@@ -67,12 +67,6 @@ mysql -h127.0.0.1 -P3306 -u config_center -p config_center < sql/001_config_cent
 mysql -h127.0.0.1 -P3306 -u config_center -p config_center < sql/002_admin_session.sql
 ```
 
-老版本数据库升级需要额外执行：
-
-```bash
-mysql -h127.0.0.1 -P3306 -u config_center -p config_center < sql/003_admin_mfa.sql
-```
-
 启动服务：
 
 ```bash
