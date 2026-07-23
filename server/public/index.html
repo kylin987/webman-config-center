@@ -73,6 +73,12 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .profile-card h2{font-size:15px;margin:0 0 14px;color:#111827}
 .profile-card p{margin:7px 0;color:var(--muted);line-height:1.65}
 .profile-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.mfa-bind-box{display:grid;grid-template-columns:180px 1fr;gap:16px;align-items:start;margin:14px 0}
+.mfa-qr{width:180px;min-height:180px;padding:12px;border:1px solid #d6e4ff;border-radius:12px;background:#fff;display:grid;place-items:center;box-shadow:0 8px 20px rgba(22,119,255,.08)}
+.mfa-qr svg{width:156px;height:156px;display:block}
+.mfa-qr-placeholder{color:#94a3b8;text-align:center;line-height:1.6;font-size:12px}
+.mfa-bind-tips{display:grid;gap:8px}
+.mfa-bind-tips p{margin:0}
 .profile-secret{padding:10px;border:1px dashed #91caff;border-radius:8px;background:#fff;color:#0958d9;word-break:break-all;font-family:"SFMono-Regular",Consolas,monospace;font-size:13px}
 .modal-title{font-size:16px;font-weight:650;padding-left:22px;position:relative}
 .modal-title:before{content:"";position:absolute;left:0;top:50%;width:4px;height:18px;border-radius:99px;background:var(--accent);transform:translateY(-50%)}
@@ -110,7 +116,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .modal-status{color:var(--muted)}
 .editor-actions{display:flex;gap:8px}
 @media(max-width:900px){.shell{grid-template-columns:1fr}.nav{position:sticky;top:0;z-index:2}.content{padding:16px}.editor-fields{grid-template-columns:1fr}.page-head{align-items:flex-start;flex-direction:column}.modal{padding:10px}.modal-card{width:100%;height:calc(100vh - 20px)}.account-modal-card{height:auto}.file-name strong{font-size:16px}}
-@media(max-width:900px){.profile-grid{grid-template-columns:1fr}}
+@media(max-width:900px){.profile-grid{grid-template-columns:1fr}.mfa-bind-box{grid-template-columns:1fr}.mfa-qr{width:180px}}
 </style>
 </head>
 <body>
@@ -204,9 +210,15 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
             <h2>MFA 二次验证</h2>
             <p>默认不开启。开启后，管理员登录时需要额外输入验证器里的 6 位动态验证码。</p>
             <div id="mfaSetupProfile" class="hidden">
-              <p>请在验证器中手动添加下面的密钥，然后输入动态验证码完成开启。</p>
-              <div class="profile-secret" id="profileMfaSecret"></div>
-              <p class="mono" id="profileMfaUri"></p>
+              <p>请用 Google Authenticator、1Password、Microsoft Authenticator 等验证器扫码添加，然后输入 6 位动态验证码完成开启。</p>
+              <div class="mfa-bind-box">
+                <div class="mfa-qr" id="profileMfaQr"><div class="mfa-qr-placeholder">二维码生成中</div></div>
+                <div class="mfa-bind-tips">
+                  <p>如果当前设备不方便扫码，也可以手动输入下面的密钥。</p>
+                  <div class="profile-secret" id="profileMfaSecret"></div>
+                  <p class="mono" id="profileMfaUri"></p>
+                </div>
+              </div>
               <div class="field"><label>动态验证码</label><input id="profileMfaEnableCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></div>
               <div class="profile-actions"><button id="enableMfa">确认开启 MFA</button><button class="secondary" id="cancelMfaSetup">取消</button></div>
             </div>
@@ -338,6 +350,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 <script src="/vendor/ace/mode-yaml.js"></script>
 <script src="/vendor/ace/mode-ini.js"></script>
 <script src="/vendor/ace/mode-text.js"></script>
+<script src="/vendor/qrcode/qrcode.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
@@ -970,6 +983,7 @@ async function startProfileMfaSetup() {
     profileMfaChallengeToken = data.challengeToken || '';
     $('profileMfaSecret').textContent = data.secret || '';
     $('profileMfaUri').textContent = data.otpauthUri || '';
+    renderProfileMfaQr(data.otpauthUri || '');
     $('profileMfaEnableCode').value = '';
     $('mfaSetupProfile').classList.remove('hidden');
     $('mfaDisabledActions').classList.add('hidden');
@@ -985,10 +999,31 @@ function cancelProfileMfaSetup() {
   profileMfaChallengeToken = '';
   $('profileMfaSecret').textContent = '';
   $('profileMfaUri').textContent = '';
+  $('profileMfaQr').innerHTML = '<div class="mfa-qr-placeholder">二维码生成中</div>';
   $('profileMfaEnableCode').value = '';
   $('mfaSetupProfile').classList.add('hidden');
   if (!profileCache?.mfaEnabled) {
     $('mfaDisabledActions').classList.remove('hidden');
+  }
+}
+
+function renderProfileMfaQr(otpauthUri) {
+  const container = $('profileMfaQr');
+  if (!otpauthUri) {
+    container.innerHTML = '<div class="mfa-qr-placeholder">缺少绑定地址</div>';
+    return;
+  }
+  if (typeof qrcode !== 'function') {
+    container.innerHTML = '<div class="mfa-qr-placeholder">二维码组件加载失败<br>请使用下方密钥手动添加</div>';
+    return;
+  }
+  try {
+    const qr = qrcode(0, 'M');
+    qr.addData(otpauthUri);
+    qr.make();
+    container.innerHTML = qr.createSvgTag(5, 2);
+  } catch (error) {
+    container.innerHTML = '<div class="mfa-qr-placeholder">二维码生成失败<br>请使用下方密钥手动添加</div>';
   }
 }
 
