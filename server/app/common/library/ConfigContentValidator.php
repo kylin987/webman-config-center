@@ -3,10 +3,6 @@
 namespace app\common\library;
 
 use InvalidArgumentException;
-use PhpParser\Node;
-use PhpParser\Node\Expr;
-use PhpParser\Node\Scalar;
-use PhpParser\Node\Stmt;
 use PhpParser\ParserFactory;
 use Symfony\Component\Yaml\Yaml;
 
@@ -37,43 +33,10 @@ class ConfigContentValidator
     {
         try {
             $parser = (new ParserFactory())->createForNewestSupportedVersion();
-            $statements = $parser->parse($content);
-            if (count($statements) !== 1 || !$statements[0] instanceof Stmt\Return_ || !$statements[0]->expr) {
-                throw new InvalidArgumentException('PHP 配置只能包含一个 return 字面量表达式');
-            }
-            $this->assertLiteral($statements[0]->expr);
-        } catch (InvalidArgumentException $exception) {
-            throw $exception;
+            $parser->parse($content);
         } catch (\Throwable) {
             throw new InvalidArgumentException('PHP 配置语法无效');
         }
-    }
-
-    private function assertLiteral(Node $node): void
-    {
-        if ($node instanceof Scalar\String_ || $node instanceof Scalar\LNumber || $node instanceof Scalar\DNumber) {
-            return;
-        }
-        if ($node instanceof Expr\ConstFetch && in_array(strtolower($node->name->toString()), ['true', 'false', 'null'], true)) {
-            return;
-        }
-        if ($node instanceof Expr\UnaryMinus || $node instanceof Expr\UnaryPlus) {
-            $this->assertLiteral($node->expr);
-            return;
-        }
-        if ($node instanceof Expr\Array_) {
-            foreach ($node->items as $item) {
-                if (!$item instanceof Expr\ArrayItem || !$item->value) {
-                    throw new InvalidArgumentException('PHP 配置数组格式无效');
-                }
-                if ($item->key) {
-                    $this->assertLiteral($item->key);
-                }
-                $this->assertLiteral($item->value);
-            }
-            return;
-        }
-        throw new InvalidArgumentException('PHP 配置仅允许静态字面量，不能调用函数或引用变量');
     }
 
     private function validateJson(string $content): void

@@ -66,6 +66,8 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .account-modal-card{width:min(560px,calc(100vw - 42px));height:auto;grid-template-rows:auto 1fr auto}
 .account-modal-body{padding:18px;background:#fbfdff}
 .account-modal-body .field{margin:0 0 14px}
+.import-summary{padding:12px;border:1px solid #d6e4ff;border-radius:8px;background:#f8fbff;color:#334155;line-height:1.7}
+.failure-list{max-height:150px;overflow:auto;margin-top:10px;padding:8px 10px;border:1px solid #fee2e2;border-radius:8px;background:#fff7f7;color:var(--danger);font-size:12px}
 .profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .profile-card{padding:18px}
 .profile-card h2{font-size:15px;margin:0 0 14px;color:#111827}
@@ -154,7 +156,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
       <section id="configPage">
         <div class="page-head">
           <div><h1>配置列表</h1><p>发布、查看和回滚配置文件。</p></div>
-          <div class="toolbar"><button class="secondary" id="refreshConfig">刷新</button><button id="newConfig">新增配置</button></div>
+          <div class="toolbar"><button class="secondary" id="refreshConfig">刷新</button><button class="secondary" id="exportConfig">批量导出</button><button class="secondary" id="openImportConfig">批量导入</button><button id="newConfig">新增配置</button></div>
         </div>
         <div class="panel">
           <table class="table">
@@ -218,6 +220,28 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
         <div class="status" id="profileStatus"></div>
       </section>
     </main>
+  </div>
+</section>
+<section id="importModal" class="modal hidden" aria-modal="true">
+  <div class="modal-card account-modal-card">
+    <header class="editor-tab">
+      <div class="modal-title">批量导入配置</div>
+      <button class="icon" id="closeImportModal" title="关闭">×</button>
+    </header>
+    <div class="account-modal-body">
+      <div class="field">
+        <label>zip 文件</label>
+        <input id="configImportFile" type="file" accept=".zip,application/zip,application/x-zip-compressed">
+      </div>
+      <div class="import-summary">
+        支持本系统导出的 zip，也支持 Nacos 导出的 zip。导入规则：目录名作为 Group，文件名作为 Data ID；内容相同会自动跳过，内容不同会发布新版本并保留历史。
+      </div>
+      <div id="importFailureList" class="failure-list hidden"></div>
+    </div>
+    <footer class="editor-footer">
+      <div class="modal-status" id="importModalStatus"></div>
+      <div class="editor-actions"><button class="secondary" id="cancelImport">取消</button><button id="importConfig">开始导入</button></div>
+    </footer>
   </div>
 </section>
 <section id="configModal" class="modal hidden" aria-modal="true">
@@ -396,7 +420,7 @@ function decodeConfigKey(key) {
 
 async function api(path, opt = {}) {
   opt.headers = {...(opt.headers || {}), Authorization: 'Bearer ' + adminSession};
-  if (opt.body) {
+  if (opt.body && !(opt.body instanceof FormData)) {
     opt.headers['Content-Type'] = 'application/json';
     opt.body = JSON.stringify(opt.body);
   }
@@ -452,6 +476,11 @@ function setAccountStatus(text, error = false) {
 function setAccountModalStatus(text, error = false) {
   $('accountModalStatus').textContent = text;
   $('accountModalStatus').className = 'modal-status ' + (error ? 'error' : '');
+}
+
+function setImportModalStatus(text, error = false) {
+  $('importModalStatus').textContent = text;
+  $('importModalStatus').className = 'modal-status ' + (error ? 'error' : '');
 }
 
 function setProfileStatus(text, error = false) {
@@ -528,6 +557,90 @@ async function loadConfigs() {
       deleteConfig(group, dataId);
     };
   });
+}
+
+function openImportModal() {
+  $('configImportFile').value = '';
+  $('importFailureList').classList.add('hidden');
+  $('importFailureList').innerHTML = '';
+  setImportModalStatus('');
+  $('importModal').classList.remove('hidden');
+}
+
+function closeImportModal() {
+  $('importModal').classList.add('hidden');
+  setImportModalStatus('');
+}
+
+async function exportConfigZip() {
+  try {
+    const response = await fetch('/api/admin/v1/config/export', {
+      headers: {Authorization: 'Bearer ' + adminSession}
+    });
+    if (!response.ok) {
+      let message = '导出失败';
+      try {
+        const body = await response.json();
+        message = body.message || message;
+      } catch (_) {}
+      throw Error(message);
+    }
+
+    const blob = await response.blob();
+    const disposition = response.headers.get('Content-Disposition') || '';
+    const matched = disposition.match(/filename="?([^"]+)"?/i);
+    const filename = matched ? matched[1] : 'config_center_export.zip';
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    showToast('配置已导出');
+  } catch (error) {
+    setStatus(error.message, true);
+    showToast(error.message, true);
+  }
+}
+
+async function importConfigZip() {
+  const button = $('importConfig');
+  const file = $('configImportFile').files[0];
+  if (!file) {
+    setImportModalStatus('请选择 zip 文件', true);
+    return;
+  }
+
+  try {
+    button.disabled = true;
+    setImportModalStatus('正在导入...');
+    $('importFailureList').classList.add('hidden');
+    $('importFailureList').innerHTML = '';
+
+    const form = new FormData();
+    form.append('file', file);
+    form.append('namespace', 'public');
+    const result = await api('/api/admin/v1/config/import', {method: 'POST', body: form});
+    await loadConfigs();
+
+    const message = `导入完成：新增 ${result.created}，更新 ${result.updated}，跳过 ${result.skipped}，失败 ${result.failed}`;
+    setImportModalStatus(message, result.failed > 0);
+    if (result.failures?.length) {
+      $('importFailureList').innerHTML = result.failures.map(row => `<div>${escapeHtml(row.file)}：${escapeHtml(row.reason)}</div>`).join('');
+      $('importFailureList').classList.remove('hidden');
+    }
+    showToast(message, result.failed > 0);
+    if (!result.failed) {
+      setTimeout(closeImportModal, 700);
+    }
+  } catch (error) {
+    setImportModalStatus(error.message, true);
+    showToast(error.message, true);
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function showConfigModal(item) {
@@ -988,9 +1101,12 @@ $('refreshConfig').onclick = () => loadConfigs().catch(error => setStatus(error.
 $('refreshAccount').onclick = () => loadAccounts().catch(error => setAccountStatus(error.message, true));
 $('refreshProfile').onclick = () => loadProfile().catch(error => setProfileStatus(error.message, true));
 $('newConfig').onclick = newConfig;
+$('exportConfig').onclick = exportConfigZip;
+$('openImportConfig').onclick = openImportModal;
 $('newAccount').onclick = () => openAccountModal();
 $('publish').onclick = publishConfig;
 $('reloadConfig').onclick = () => current?.revision && openConfig($('group').value, $('dataId').value);
+$('importConfig').onclick = importConfigZip;
 $('saveAccount').onclick = saveAccount;
 $('changePassword').onclick = changeProfilePassword;
 $('startMfaSetup').onclick = startProfileMfaSetup;
@@ -1003,6 +1119,8 @@ $('closeDetailModalFooter').onclick = closeDetailModal;
 $('closeHistoryModal').onclick = closeHistoryModal;
 $('closeHistoryModalFooter').onclick = closeHistoryModal;
 $('publishHistoryFromDetail').onclick = () => detailHistoryId && publishHistoryVersion(detailHistoryId);
+$('closeImportModal').onclick = closeImportModal;
+$('cancelImport').onclick = closeImportModal;
 $('closeAccountModal').onclick = closeAccountModal;
 $('cancelAccount').onclick = closeAccountModal;
 $('confirmClose').onclick = () => closeConfirmModal(false);
@@ -1018,6 +1136,7 @@ document.addEventListener('keydown', event => {
     if (!$('detailModal').classList.contains('hidden')) return closeDetailModal();
     if (!$('historyModal').classList.contains('hidden')) return closeHistoryModal();
     if (!$('configModal').classList.contains('hidden')) return closeConfigModal();
+    if (!$('importModal').classList.contains('hidden')) return closeImportModal();
     if (!$('accountModal').classList.contains('hidden')) return closeAccountModal();
   }
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's' && !$('configModal').classList.contains('hidden')) {

@@ -8,7 +8,8 @@
 
 ## 功能
 
-- 配置管理：新增、编辑、详情、历史版本、发布历史版本为最新版本。
+- 配置管理：新增、编辑、详情、删除、历史版本、发布历史版本为最新版本。
+- 批量迁移：支持批量导出 zip，支持导入本系统 zip 和 Nacos 导出的配置 zip。
 - 客户端账号：通过账号密码给业务项目读取配置。
 - 数据持久化：MySQL 保存配置、历史版本、账号和登录会话。
 - 变更通知：发布配置后写入 outbox，并通过 Redis Pub/Sub 广播变更事件。
@@ -107,6 +108,21 @@ WHERE admin_user_id = (SELECT id FROM cc_admin_user WHERE username = 'admin');
 ```
 
 重置后，该管理员会回到未开启 MFA 状态，可在个人中心重新开启。
+
+## 批量导入和导出
+
+管理后台的“配置管理”页面支持：
+
+- 批量导出：导出当前 namespace 下所有配置，zip 内路径为 `Group/Data ID`。
+- 批量导入：上传 zip 后按文件路径导入配置。
+- Nacos 兼容：Nacos 导出的 zip 通常是 `group/dataId` 结构，例如 `yhs/yhs-mysql.php`，系统会自动映射为 `Group = yhs`、`Data ID = yhs-mysql.php`。
+
+导入规则：
+
+- 已存在且内容相同：跳过。
+- 已存在但内容不同：发布为新版本，并保留历史版本。
+- 不存在：新增配置，初始版本为 `r1`。
+- `.php`、`.json`、`.yaml`、`.yml`、`.ini` 会按对应格式校验；其他后缀按 `txt` 保存。
 
 ## Docker 运行
 

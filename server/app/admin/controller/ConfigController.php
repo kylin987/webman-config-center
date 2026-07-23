@@ -5,6 +5,7 @@ namespace app\admin\controller;
 use app\common\library\DateTimeFormatter;
 use app\common\model\ConfigHistory;
 use app\common\model\ConfigItem;
+use app\common\server\ConfigBatchServer;
 use app\common\server\ConfigPublishServer;
 use InvalidArgumentException;
 use support\Request;
@@ -105,6 +106,52 @@ class ConfigController
             return json(['code' => 0]);
         } catch (InvalidArgumentException $exception) {
             return json(['code' => 400, 'message' => $exception->getMessage()])->withStatus(400);
+        }
+    }
+
+    public function export(Request $request): Response
+    {
+        try {
+            $namespace = (string) ($request->get('namespace') ?: config('config-center.default_namespace'));
+            [$zipPath, $filename] = (new ConfigBatchServer())->exportZip($namespace);
+            $body = file_get_contents($zipPath);
+            @unlink($zipPath);
+            if ($body === false) {
+                throw new InvalidArgumentException('读取导出文件失败');
+            }
+            return response($body, 200, [
+                'Content-Type' => 'application/zip',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+                'Cache-Control' => 'no-store',
+            ]);
+        } catch (\Throwable $throwable) {
+            return json(['code' => 400, 'message' => $throwable->getMessage() ?: '导出失败'])->withStatus(400);
+        }
+    }
+
+    public function import(Request $request): Response
+    {
+        $file = $request->file('file');
+        if (!$file || is_array($file) || !$file->isValid()) {
+            return json(['code' => 400, 'message' => '请上传 zip 文件'])->withStatus(400);
+        }
+
+        if (strtolower($file->getUploadExtension()) !== 'zip') {
+            return json(['code' => 400, 'message' => '只支持导入 zip 文件'])->withStatus(400);
+        }
+
+        try {
+            $namespace = (string) ($request->post('namespace') ?: config('config-center.default_namespace'));
+            $summary = (new ConfigBatchServer())->importZip(
+                $file->getPathname(),
+                $namespace,
+                $request->attribute('admin_user')->username
+            );
+            return json(['code' => 0, 'data' => $summary]);
+        } catch (InvalidArgumentException $exception) {
+            return json(['code' => 400, 'message' => $exception->getMessage()])->withStatus(400);
+        } catch (\Throwable $throwable) {
+            return json(['code' => 400, 'message' => $throwable->getMessage() ?: '导入失败'])->withStatus(400);
         }
     }
 }

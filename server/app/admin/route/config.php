@@ -21,6 +21,8 @@ Route::group('/api/admin/v1', function () {
     Route::post('/config/publish', [ConfigController::class, 'publish']);
     Route::post('/config/rollback', [ConfigController::class, 'rollback']);
     Route::post('/config/delete', [ConfigController::class, 'delete']);
+    Route::get('/config/export', [ConfigController::class, 'export']);
+    Route::post('/config/import', [ConfigController::class, 'import']);
     Route::get('/clientAccount', [ClientAccountController::class, 'index']);
     Route::post('/clientAccount', [ClientAccountController::class, 'create']);
     Route::post('/clientAccount/update', [ClientAccountController::class, 'update']);
