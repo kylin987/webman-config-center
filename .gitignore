@@ -3,6 +3,7 @@
 /.vscode
 /vendor
 *.log
+.DS_Store
 .env
 /tests/tmp
 /tests/.phpunit.result.cache
