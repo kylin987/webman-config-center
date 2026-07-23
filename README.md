@@ -147,7 +147,7 @@ GET /api/client/v1/config?namespace=public&group=DEFAULT_GROUP&dataId=app.php
 业务项目推荐使用独立客户端 Composer 包：
 
 ```bash
-composer require yhs/webman-config-center
+composer require kylin987/webman-config-center-client
 ```
 
 客户端仓库：
