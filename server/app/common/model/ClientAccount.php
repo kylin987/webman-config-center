@@ -4,10 +4,9 @@ namespace app\common\model;
 
 use support\Model;
 
-class ClientToken extends Model
+class ClientAccount extends Model
 {
-    protected $table = 'cc_client_token';
+    protected $table = 'cc_client_account';
 
     protected $guarded = ['id'];
 }
-

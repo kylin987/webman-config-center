@@ -20,5 +20,16 @@ namespace support;
  */
 class Request extends \Webman\Http\Request
 {
+    private array $attributes = [];
 
+    public function setAttribute(string $name, mixed $value): self
+    {
+        $this->attributes[$name] = $value;
+        return $this;
+    }
+
+    public function attribute(string $name, mixed $default = null): mixed
+    {
+        return $this->attributes[$name] ?? $default;
+    }
 }

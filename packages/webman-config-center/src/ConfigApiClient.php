@@ -23,8 +23,11 @@ final class ConfigApiClient
     {
         $response = $this->client->get('api/client/v1/config', [
             'headers' => [
-                'Authorization' => 'Bearer ' . (string) ($this->config['token'] ?? ''),
                 'Accept' => 'application/json',
+            ],
+            'auth' => [
+                (string) ($this->config['username'] ?? ''),
+                (string) ($this->config['password'] ?? ''),
             ],
             'query' => compact('namespace', 'group', 'dataId'),
         ]);
@@ -47,4 +50,3 @@ final class ConfigApiClient
         );
     }
 }
-

@@ -4,8 +4,8 @@ namespace app\admin\middleware;
 
 use app\common\server\AdminAuthServer;
 use InvalidArgumentException;
-use support\Request;
-use support\Response;
+use Webman\Http\Request;
+use Webman\Http\Response;
 use Webman\MiddlewareInterface;
 
 class AdminAuthMiddleware implements MiddlewareInterface
@@ -16,10 +16,12 @@ class AdminAuthMiddleware implements MiddlewareInterface
         $token = str_starts_with($header, 'Bearer ') ? substr($header, 7) : '';
         try {
             $user = (new AdminAuthServer())->userByToken($token);
-            return $handler($request->withAttribute('admin_user', $user));
+            if (method_exists($request, 'setAttribute')) {
+                $request->setAttribute('admin_user', $user);
+            }
+            return $handler($request);
         } catch (InvalidArgumentException $exception) {
-            return json(['code' => 401, 'message' => $exception->getMessage()], 401)->withHeader('Cache-Control', 'no-store');
+            return json(['code' => 401, 'message' => $exception->getMessage()])->withStatus(401)->withHeader('Cache-Control', 'no-store');
         }
     }
 }
-

@@ -6,8 +6,9 @@ use support\Model;
 
 class ConfigHistory extends Model
 {
+    public const UPDATED_AT = null;
+
     protected $table = 'cc_config_history';
 
     protected $guarded = ['id'];
 }
-

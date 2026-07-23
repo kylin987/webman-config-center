@@ -16,12 +16,13 @@ class AdminAuthServer
             throw new InvalidArgumentException('用户名或密码错误');
         }
         $token = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+        $expiresAt = date('Y-m-d H:i:s', time() + 28800);
         AdminSession::query()->create([
             'admin_user_id' => $user->id,
             'token_hash' => hash('sha256', $token),
-            'expires_at' => date('Y-m-d H:i:s', time() + 28800),
+            'expires_at' => $expiresAt,
         ]);
-        return ['token' => $token, 'username' => $user->username, 'expiresAt' => date(DATE_ATOM, time() + 28800)];
+        return ['token' => $token, 'username' => $user->username, 'expiresAt' => $expiresAt];
     }
 
     public function userByToken(string $token): AdminUser
@@ -47,4 +48,3 @@ class AdminAuthServer
         AdminUser::query()->create(['username' => $bootstrapUser, 'password_hash' => password_hash($bootstrapPassword, PASSWORD_DEFAULT)]);
     }
 }
-

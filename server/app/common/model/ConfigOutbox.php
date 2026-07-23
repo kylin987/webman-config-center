@@ -6,6 +6,8 @@ use support\Model;
 
 class ConfigOutbox extends Model
 {
+    public const UPDATED_AT = null;
+
     public $incrementing = false;
 
     protected $keyType = 'string';
@@ -14,4 +16,3 @@ class ConfigOutbox extends Model
 
     protected $guarded = [];
 }
-

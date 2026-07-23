@@ -2,6 +2,7 @@
 
 namespace app\admin\controller;
 
+use app\common\library\DateTimeFormatter;
 use app\common\model\ConfigHistory;
 use app\common\model\ConfigItem;
 use app\common\server\ConfigPublishServer;
@@ -21,7 +22,7 @@ class ConfigController
             'dataId' => $item->data_id,
             'format' => $item->format,
             'revision' => (int) $item->revision,
-            'updatedAt' => $item->updated_at?->toAtomString(),
+            'updatedAt' => DateTimeFormatter::beijing($item->updated_at),
         ])->values()]);
     }
 
@@ -30,20 +31,33 @@ class ConfigController
         $namespace = (string) ($request->get('namespace') ?: config('config-center.default_namespace'));
         $group = (string) $request->get('group');
         $dataId = (string) $request->get('dataId');
-        if ($group === '' || $dataId === '') return json(['code' => 400, 'message' => 'group 和 dataId 为必填项'], 400);
+        if ($group === '' || $dataId === '') return json(['code' => 400, 'message' => 'group 和 dataId 为必填项'])->withStatus(400);
         $history = ConfigHistory::query()->where([
             'namespace' => $namespace,
             'config_group' => $group,
             'data_id' => $dataId,
         ])->orderByDesc('revision')->get();
-        return json(['code' => 0, 'data' => $history]);
+        return json(['code' => 0, 'data' => $history->map(fn (ConfigHistory $item) => [
+            'id' => (int) $item->id,
+            'config_item_id' => (int) $item->config_item_id,
+            'namespace' => $item->namespace,
+            'config_group' => $item->config_group,
+            'data_id' => $item->data_id,
+            'format' => $item->format,
+            'content' => $item->content,
+            'content_md5' => $item->content_md5,
+            'revision' => (int) $item->revision,
+            'operator' => $item->operator,
+            'note' => $item->note,
+            'created_at' => DateTimeFormatter::beijing($item->created_at),
+        ])->values()]);
     }
 
     public function show(Request $request): Response
     {
         $namespace = (string) ($request->get('namespace') ?: config('config-center.default_namespace'));
         $item = ConfigItem::query()->where(['namespace' => $namespace, 'config_group' => (string) $request->get('group'), 'data_id' => (string) $request->get('dataId')])->first();
-        if (!$item) return json(['code' => 404, 'message' => '配置不存在'], 404);
+        if (!$item) return json(['code' => 404, 'message' => '配置不存在'])->withStatus(404);
         return json(['code' => 0, 'data' => ['namespace' => $item->namespace, 'group' => $item->config_group, 'dataId' => $item->data_id, 'format' => $item->format, 'content' => $item->content, 'revision' => (int) $item->revision]]);
     }
 
@@ -60,14 +74,14 @@ class ConfigController
                 'md5' => $item->content_md5,
             ]]);
         } catch (InvalidArgumentException $exception) {
-            return json(['code' => 400, 'message' => $exception->getMessage()], 400);
+            return json(['code' => 400, 'message' => $exception->getMessage()])->withStatus(400);
         }
     }
 
     public function rollback(Request $request): Response
     {
         $history = ConfigHistory::query()->find((int) $request->post('historyId'));
-        if (!$history) return json(['code' => 404, 'message' => '历史版本不存在'], 404);
+        if (!$history) return json(['code' => 404, 'message' => '历史版本不存在'])->withStatus(404);
         try {
             $item = (new ConfigPublishServer())->publish([
                 'namespace' => $history->namespace,
@@ -80,7 +94,7 @@ class ConfigController
             ], $request->attribute('admin_user')->username);
             return json(['code' => 0, 'data' => ['revision' => (int) $item->revision]]);
         } catch (InvalidArgumentException $exception) {
-            return json(['code' => 400, 'message' => $exception->getMessage()], 400);
+            return json(['code' => 400, 'message' => $exception->getMessage()])->withStatus(400);
         }
     }
 }

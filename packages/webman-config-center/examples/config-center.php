@@ -2,7 +2,8 @@
 
 return [
     'endpoint' => getenv('CONFIG_CENTER_ENDPOINT') ?: 'https://config.example.com/',
-    'token' => getenv('CONFIG_CENTER_TOKEN') ?: '',
+    'username' => getenv('CONFIG_CENTER_USERNAME') ?: '',
+    'password' => getenv('CONFIG_CENTER_PASSWORD') ?: '',
     'namespace' => 'public',
     'config_root' => getenv('CONFIG_CENTER_CONFIG_ROOT') ?: base_path() . '/config/nacos',
     'state_dir' => getenv('CONFIG_CENTER_STATE_DIR') ?: runtime_path() . '/config-center',

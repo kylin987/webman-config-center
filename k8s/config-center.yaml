@@ -38,6 +38,11 @@ spec:
           envFrom:
             - secretRef:
                 name: config-center-runtime
+          env:
+            - name: APP_DEBUG
+              value: "0"
+            - name: WEBMAN_HTTP_WORKERS
+              value: "2"
           resources:
             requests:
               cpu: 100m
@@ -74,4 +79,3 @@ spec:
     - name: http
       port: 80
       targetPort: http
-

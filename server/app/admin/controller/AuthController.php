@@ -14,7 +14,7 @@ class AuthController
         try {
             return json(['code' => 0, 'data' => (new AdminAuthServer())->login((string) $request->post('username'), (string) $request->post('password'))]);
         } catch (InvalidArgumentException $exception) {
-            return json(['code' => 401, 'message' => $exception->getMessage()], 401);
+            return json(['code' => 401, 'message' => $exception->getMessage()])->withStatus(401);
         }
     }
 
@@ -25,4 +25,3 @@ class AuthController
         return json(['code' => 0]);
     }
 }
-

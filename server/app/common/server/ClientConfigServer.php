@@ -2,29 +2,29 @@
 
 namespace app\common\server;
 
-use app\common\model\ClientToken;
-use app\common\model\ClientTokenRule;
+use app\common\library\DateTimeFormatter;
+use app\common\model\ClientAccount;
 use app\common\model\ConfigItem;
 use InvalidArgumentException;
 
 class ClientConfigServer
 {
-    public function authenticate(string $rawToken): ClientToken
+    public function authenticate(string $username, string $password): ClientAccount
     {
-        if ($rawToken === '') {
-            throw new InvalidArgumentException('缺少客户端令牌');
+        $username = trim($username);
+        if ($username === '' || $password === '') {
+            throw new InvalidArgumentException('缺少客户端账号或密码');
         }
-        $token = ClientToken::query()->where('token_hash', hash('sha256', $rawToken))->where('enabled', true)->first();
-        if (!$token) {
-            throw new InvalidArgumentException('客户端令牌无效');
+        $account = ClientAccount::query()->where('username', $username)->where('enabled', true)->first();
+        if (!$account || !password_verify($password, $account->password_hash)) {
+            throw new InvalidArgumentException('客户端账号或密码错误');
         }
-        $token->forceFill(['last_used_at' => date('Y-m-d H:i:s')])->save();
-        return $token;
+        $account->forceFill(['last_used_at' => date('Y-m-d H:i:s')])->save();
+        return $account;
     }
 
-    public function read(ClientToken $token, string $namespace, string $group, string $dataId): array
+    public function read(ClientAccount $account, string $namespace, string $group, string $dataId): array
     {
-        $this->assertAllowed($token, $namespace, $group, $dataId);
         $item = ConfigItem::query()->where([
             'namespace' => $namespace,
             'config_group' => $group,
@@ -41,20 +41,7 @@ class ClientConfigServer
             'content' => $item->content,
             'revision' => (int) $item->revision,
             'md5' => $item->content_md5,
-            'updatedAt' => $item->updated_at?->toAtomString(),
+            'updatedAt' => DateTimeFormatter::beijing($item->updated_at),
         ];
-    }
-
-    private function assertAllowed(ClientToken $token, string $namespace, string $group, string $dataId): void
-    {
-        $allowed = ClientTokenRule::query()->where([
-            'client_token_id' => $token->id,
-            'namespace' => $namespace,
-            'config_group' => $group,
-            'data_id' => $dataId,
-        ])->exists();
-        if (!$allowed) {
-            throw new InvalidArgumentException('该令牌没有读取此配置的权限');
-        }
     }
 }

@@ -5,18 +5,772 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Config Center</title>
 <style>
-:root{--ink:#18211f;--muted:#718078;--line:#d7ddd8;--paper:#f5f7f4;--panel:#fff;--accent:#18795d;--danger:#b42318}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:14px "SF Pro Text","PingFang SC",sans-serif}button,input,select,textarea{font:inherit}#login{min-height:100vh;display:grid;place-items:center}.login-card{width:min(390px,calc(100vw - 32px));padding:28px;background:var(--panel);border:1px solid var(--line);box-shadow:0 18px 50px #20332814}.mark{font:700 26px Georgia,serif;color:var(--accent);letter-spacing:0}.login-card p{color:var(--muted);margin:6px 0 24px}.field{display:grid;gap:7px;margin:13px 0}.field label{font-size:12px;color:var(--muted)}input,select,textarea{width:100%;border:1px solid var(--line);background:#fff;padding:10px;border-radius:4px}textarea{min-height:360px;resize:vertical;font-family:"SFMono-Regular",Consolas,monospace;font-size:13px;line-height:1.6}button{border:0;border-radius:4px;padding:10px 14px;background:var(--accent);color:#fff;cursor:pointer}button.secondary{background:#edf1ee;color:var(--ink)}button.danger{background:var(--danger)}#app{display:none;min-height:100vh}.top{height:58px;background:#17372f;color:#fff;display:flex;align-items:center;padding:0 24px;justify-content:space-between}.top strong{font:700 20px Georgia,serif}.top span{font-size:12px;color:#c8d6d0}.layout{display:grid;grid-template-columns:290px 1fr;min-height:calc(100vh - 58px)}aside{border-right:1px solid var(--line);background:#fbfcfa;padding:18px}.aside-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.item{padding:11px 10px;border-bottom:1px solid #edf0ed;cursor:pointer}.item:hover,.item.active{background:#e6f1ec}.item b{display:block;font-weight:600}.item small{color:var(--muted)}main{padding:28px;max-width:1100px;width:100%}.title{display:flex;align-items:center;justify-content:space-between}.title h1{font:600 20px Georgia,serif;margin:0}.grid{display:grid;grid-template-columns:1fr 150px 160px;gap:12px;margin:18px 0}.actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}.status{min-height:20px;color:var(--muted);margin-top:12px}.status.error{color:var(--danger)}.empty{color:var(--muted);padding:40px 0}.hidden{display:none!important}@media(max-width:760px){.layout{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid var(--line)}.grid{grid-template-columns:1fr}.top{padding:0 14px}main{padding:18px}}
+:root{--ink:#1f2937;--muted:#6b7280;--line:#e5e7eb;--paper:#f5f7fb;--panel:#fff;--accent:#1677ff;--accent-hover:#0958d9;--accent-soft:#e6f4ff;--danger:#d92d20;--danger-soft:#fff1f0;--nav:#fff;--editor:#111827;--editor-head:#1f2937;--shadow:0 8px 24px rgba(15,23,42,.06)}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#f8fbff 0,#f3f6fb 260px,var(--paper) 100%);color:var(--ink);font:14px "SF Pro Text","PingFang SC","Microsoft YaHei",sans-serif}
+button,input,select{font:inherit}
+button{border:1px solid transparent;border-radius:6px;padding:8px 14px;background:var(--accent);color:#fff;cursor:pointer;box-shadow:0 2px 5px rgba(22,119,255,.18);transition:background .15s ease,border-color .15s ease,box-shadow .15s ease,transform .15s ease}
+button:hover{background:var(--accent-hover);box-shadow:0 4px 10px rgba(22,119,255,.22)}
+button:active{transform:translateY(1px)}
+button.secondary{background:#fff;color:var(--ink);border-color:var(--line);box-shadow:none}
+button.secondary:hover{background:#f8fafc;border-color:#cbd5e1;color:var(--accent)}
+button.danger{background:#fff;color:var(--danger);border-color:#ffccc7;box-shadow:none}
+button.danger:hover{background:var(--danger-soft);border-color:#ff9c93}
+button.small{padding:5px 9px;font-size:12px;border-radius:5px}
+button.icon{background:transparent;color:#d1d5db;font-size:28px;line-height:1;padding:4px 10px;box-shadow:none;border:0}
+button.icon:hover{background:rgba(255,255,255,.08);color:#fff}
+button:disabled{opacity:.55;cursor:not-allowed}
+input,select{width:100%;border:1px solid #d9dee8;background:#fff;padding:9px 11px;border-radius:6px;outline:none;transition:border-color .15s ease,box-shadow .15s ease}
+input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,255,.12)}
+#login{min-height:100vh;display:grid;place-items:center}
+.login-card{width:min(390px,calc(100vw - 32px));padding:30px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.login-card:before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,var(--accent),#69b1ff)}
+.brand{font-weight:700;font-size:24px;letter-spacing:.2px;color:#0f172a}
+.login-card p{color:var(--muted);margin:6px 0 24px}
+.field{display:grid;gap:7px;margin:12px 0}
+.field label{font-size:12px;color:var(--muted)}
+#app{display:none;min-height:100vh}
+.shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+.nav{background:var(--nav);color:var(--ink);padding:22px 14px;display:flex;flex-direction:column;gap:18px;border-right:1px solid var(--line);box-shadow:4px 0 18px rgba(15,23,42,.03)}
+.nav .brand{color:#0f172a;font-size:21px;padding:0 8px}
+.nav small{display:block;color:var(--muted);padding:3px 8px 0}
+.menu{display:grid;gap:6px}
+.menu button{width:100%;text-align:left;background:transparent;color:#4b5563;border-radius:8px;box-shadow:none;border:1px solid transparent;padding:10px 12px;position:relative}
+.menu button:hover{background:#f8fafc;color:var(--accent);box-shadow:none}
+.menu button.active{background:var(--accent-soft);color:var(--accent);font-weight:600;box-shadow:none}
+.menu button.active:before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:99px;background:var(--accent)}
+.nav-foot{margin-top:auto;padding:0 8px;display:grid;gap:10px;color:#9ca3af;font-size:12px}
+.content{padding:28px;min-width:0}
+.page-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}
+.page-head h1{font-size:22px;margin:0;color:#0f172a;font-weight:650}
+.page-head p{margin:4px 0 0;color:var(--muted)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:16px;box-shadow:var(--shadow);overflow:hidden}
+.panel-head{display:flex;justify-content:space-between;align-items:center;padding:13px 16px;border-bottom:1px solid var(--line);background:#fbfdff}
+.panel-head h2{font-size:15px;margin:0;color:#111827}
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{padding:12px 16px;border-bottom:1px solid #eef2f7;text-align:left;vertical-align:middle}
+.table th{font-size:12px;color:#6b7280;font-weight:600;background:#f8fafc}
+.table tr:last-child td{border-bottom:0}
+.table tr:hover td{background:#f8fbff}
+.mono{font-family:"SFMono-Regular",Consolas,monospace;font-size:12px;color:var(--muted)}
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:12px;border:1px solid #bae0ff}
+.tag.off{background:#f9fafb;color:#6b7280;border-color:#e5e7eb}
+.account-modal-card{width:min(560px,calc(100vw - 42px));height:auto;grid-template-rows:auto 1fr auto}
+.account-modal-body{padding:18px;background:#fbfdff}
+.account-modal-body .field{margin:0 0 14px}
+.modal-title{font-size:16px;font-weight:650;padding-left:22px;position:relative}
+.modal-title:before{content:"";position:absolute;left:0;top:50%;width:4px;height:18px;border-radius:99px;background:var(--accent);transform:translateY(-50%)}
+.status{min-height:20px;color:var(--muted);margin-top:10px}
+.status.error,.modal-status.error{color:var(--danger)}
+.empty{padding:32px 14px;color:var(--muted)}
+.hidden{display:none!important}
+.toast{position:fixed;right:24px;top:22px;z-index:60;min-width:280px;max-width:min(420px,calc(100vw - 48px));padding:13px 16px 13px 42px;border-radius:10px;background:#fff;border:1px solid #b7eb8f;box-shadow:0 14px 42px rgba(15,23,42,.18);color:#1f2937;opacity:0;pointer-events:none;transform:translateY(-8px);transition:opacity .18s ease,transform .18s ease}
+.toast:before{content:"✓";position:absolute;left:15px;top:12px;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;background:#52c41a;color:#fff;font-size:12px;font-weight:700}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.error{border-color:#ffa39e}
+.toast.error:before{content:"!";background:var(--danger)}
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.58);backdrop-filter:blur(2px);display:grid;place-items:center;z-index:20;padding:28px}
+#detailModal{z-index:30}
+#confirmModal{z-index:70}
+.modal-card{width:min(1180px,calc(100vw - 42px));height:min(820px,calc(100vh - 42px));background:#fff;box-shadow:0 28px 90px rgba(15,23,42,.32);display:grid;grid-template-rows:auto auto 1fr auto;border:1px solid rgba(15,23,42,.12);border-radius:10px;overflow:hidden}
+.history-modal-card{width:min(920px,calc(100vw - 42px));height:min(680px,calc(100vh - 42px));grid-template-rows:auto 1fr auto}
+.readonly-modal-card{width:min(1060px,calc(100vw - 42px));height:min(760px,calc(100vh - 42px));grid-template-rows:auto auto 1fr auto}
+.confirm-modal-card{width:min(460px,calc(100vw - 42px));height:auto;grid-template-rows:auto 1fr auto}
+.confirm-body{padding:18px 20px;color:#4b5563;line-height:1.7;background:#fff}
+.editor-tab{height:56px;background:#fff;color:#111827;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding:0 14px 0 18px}
+.editor-tab button.icon{color:#94a3b8}
+.editor-tab button.icon:hover{background:#f1f5f9;color:#0f172a}
+.file-name{display:flex;align-items:center;gap:10px;min-width:0}
+.file-dot{width:4px;height:22px;border-radius:99px;background:var(--accent);box-shadow:none;flex:0 0 auto}
+.file-name strong{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:650}
+.file-name small{color:#8b95a5;background:#f3f6fb;border:1px solid #e5e7eb;border-radius:999px;padding:2px 8px}
+.editor-fields{display:grid;grid-template-columns:1fr 180px 160px;gap:12px;padding:12px 16px;background:#f8fafc;border-bottom:1px solid var(--line)}
+#codeEditor{min-height:360px;width:100%;height:100%;font-size:16px;line-height:1.55}
+#readonlyEditor{min-height:360px;width:100%;height:100%;font-size:16px;line-height:1.55}
+.history-body{overflow:auto;background:#fff}
+.history-body .table td:last-child{white-space:nowrap}
+.history-empty{padding:34px 18px;color:var(--muted)}
+.editor-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:#fbfdff;border-top:1px solid var(--line)}
+.modal-status{color:var(--muted)}
+.editor-actions{display:flex;gap:8px}
+@media(max-width:900px){.shell{grid-template-columns:1fr}.nav{position:sticky;top:0;z-index:2}.content{padding:16px}.editor-fields{grid-template-columns:1fr}.page-head{align-items:flex-start;flex-direction:column}.modal{padding:10px}.modal-card{width:100%;height:calc(100vh - 20px)}.account-modal-card{height:auto}.file-name strong{font-size:16px}}
 </style>
 </head>
 <body>
-<section id="login"><form class="login-card" id="loginForm"><div class="mark">Config Center</div><p>轻量配置管理</p><div class="field"><label>用户名</label><input name="username" value="admin" autocomplete="username" required></div><div class="field"><label>密码</label><input name="password" type="password" autocomplete="current-password" required></div><button type="submit">登录</button><div class="status" id="loginStatus"></div></form></section>
-<section id="app"><header class="top"><strong>Config Center</strong><span id="who"></span><button class="secondary" id="logout">退出</button></header><div class="layout"><aside><div class="aside-head"><b>配置</b><button id="new">新建</button></div><div id="items"></div></aside><main><div class="title"><h1 id="heading">选择一项配置</h1><button class="secondary" id="history">历史版本</button></div><div id="editor" class="hidden"><div class="grid"><div class="field"><label>Data ID</label><input id="dataId"></div><div class="field"><label>Group</label><input id="group" value="DEFAULT_GROUP"></div><div class="field"><label>格式</label><select id="format"><option>php</option><option>json</option><option>yaml</option><option>yml</option><option>ini</option><option>txt</option></select></div></div><textarea id="content" spellcheck="false"></textarea><div class="actions"><button class="secondary" id="reload">重新读取</button><button id="publish">发布配置</button></div></div><div id="empty" class="empty">请选择配置，或创建一项新配置。</div><div class="status" id="status"></div></main></div></section>
+<div id="toast" class="toast"></div>
+<section id="login">
+  <form class="login-card" id="loginForm">
+    <div class="brand">Config Center</div>
+    <p>轻量配置管理</p>
+    <div class="field"><label>用户名</label><input name="username" value="admin" autocomplete="username" required></div>
+    <div class="field"><label>密码</label><input name="password" type="password" autocomplete="current-password" required></div>
+    <button type="submit">登录</button>
+    <div class="status" id="loginStatus"></div>
+  </form>
+</section>
+<section id="app">
+  <div class="shell">
+    <aside class="nav">
+      <div><div class="brand">Config Center</div><small id="who">已登录</small></div>
+      <div class="menu">
+        <button id="navConfig" class="active">配置管理</button>
+        <button id="navAccount">客户端账号</button>
+      </div>
+      <div class="nav-foot">
+        <button class="secondary" id="logout">退出登录</button>
+        <span>Webman lightweight config service</span>
+      </div>
+    </aside>
+    <main class="content">
+      <section id="configPage">
+        <div class="page-head">
+          <div><h1>配置列表</h1><p>发布、查看和回滚配置文件。</p></div>
+          <div class="toolbar"><button class="secondary" id="refreshConfig">刷新</button><button id="newConfig">新增配置</button></div>
+        </div>
+        <div class="panel">
+          <table class="table">
+            <thead><tr><th>Data ID</th><th>Group</th><th>格式</th><th>版本</th><th>更新时间</th><th>操作</th></tr></thead>
+            <tbody id="configRows"></tbody>
+          </table>
+          <div id="configEmpty" class="empty hidden">暂无配置</div>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+      <section id="accountPage" class="hidden">
+        <div class="page-head">
+          <div><h1>客户端账号</h1><p>给业务项目创建专用账号密码，所有配置读取都使用这套账号密码。</p></div>
+          <div class="toolbar"><button class="secondary" id="refreshAccount">刷新</button><button id="newAccount">新增账号</button></div>
+        </div>
+        <div class="panel">
+          <table class="table">
+            <thead><tr><th>名称</th><th>账号</th><th>状态</th><th>最后使用</th><th>操作</th></tr></thead>
+            <tbody id="accountRows"></tbody>
+          </table>
+          <div id="accountEmpty" class="empty hidden">暂无客户端账号</div>
+        </div>
+        <div class="status" id="accountStatus"></div>
+      </section>
+    </main>
+  </div>
+</section>
+<section id="configModal" class="modal hidden" aria-modal="true">
+  <div class="modal-card">
+    <header class="editor-tab">
+      <div class="file-name"><span class="file-dot"></span><strong id="modalFileName">new.php</strong><small id="modalRevision"></small></div>
+      <button class="icon" id="closeConfigModal" title="关闭">×</button>
+    </header>
+    <div class="editor-fields">
+      <div class="field"><label>Data ID</label><input id="dataId"></div>
+      <div class="field"><label>Group</label><input id="group" value="DEFAULT_GROUP"></div>
+      <div class="field"><label>格式</label><select id="format"><option>php</option><option>json</option><option>yaml</option><option>yml</option><option>ini</option><option>txt</option></select></div>
+    </div>
+    <div id="codeEditor"></div>
+    <footer class="editor-footer">
+      <div class="modal-status" id="modalStatus"></div>
+      <div class="editor-actions"><button class="secondary" id="reloadConfig">重新读取</button><button id="publish">发布配置</button></div>
+    </footer>
+  </div>
+</section>
+<section id="detailModal" class="modal hidden" aria-modal="true">
+  <div class="modal-card readonly-modal-card">
+    <header class="editor-tab">
+      <div class="file-name"><span class="file-dot"></span><strong id="detailTitle">配置详情</strong><small id="detailMeta"></small></div>
+      <button class="icon" id="closeDetailModal" title="关闭">×</button>
+    </header>
+    <div class="editor-fields">
+      <div class="field"><label>Data ID</label><input id="detailDataId" readonly></div>
+      <div class="field"><label>Group</label><input id="detailGroup" readonly></div>
+      <div class="field"><label>格式</label><input id="detailFormat" readonly></div>
+    </div>
+    <div id="readonlyEditor"></div>
+    <footer class="editor-footer">
+      <div class="modal-status" id="detailStatus"></div>
+      <div class="editor-actions"><button class="secondary" id="closeDetailModalFooter">关闭</button><button id="publishHistoryFromDetail" class="hidden">发布为最新版本</button></div>
+    </footer>
+  </div>
+</section>
+<section id="historyModal" class="modal hidden" aria-modal="true">
+  <div class="modal-card history-modal-card">
+    <header class="editor-tab">
+      <div class="file-name"><span class="file-dot"></span><strong id="historyTitle">历史版本</strong><small id="historyMeta"></small></div>
+      <button class="icon" id="closeHistoryModal" title="关闭">×</button>
+    </header>
+    <div class="history-body">
+      <table class="table">
+        <thead><tr><th>版本</th><th>发布时间</th><th>操作人</th><th>备注</th><th>操作</th></tr></thead>
+        <tbody id="historyRows"></tbody>
+      </table>
+      <div id="historyEmpty" class="history-empty hidden">暂无历史版本</div>
+    </div>
+    <footer class="editor-footer">
+      <div class="modal-status" id="historyStatus"></div>
+      <div class="editor-actions"><button class="secondary" id="closeHistoryModalFooter">关闭</button></div>
+    </footer>
+  </div>
+</section>
+<section id="accountModal" class="modal hidden" aria-modal="true">
+  <div class="modal-card account-modal-card">
+    <header class="editor-tab">
+      <div class="modal-title" id="accountModalTitle">新增客户端账号</div>
+      <button class="icon" id="closeAccountModal" title="关闭">×</button>
+    </header>
+    <div class="account-modal-body">
+      <div class="field"><label>名称</label><input id="accountName" placeholder="例如 yhs-bus-prod"></div>
+      <div class="field"><label>账号</label><input id="accountUsername" placeholder="yhs_bus"></div>
+      <div class="field"><label>密码</label><input id="accountPassword" type="password" placeholder="新增必填；编辑时留空表示不修改"></div>
+      <div class="field"><label>状态</label><select id="accountEnabled"><option value="1">启用</option><option value="0">停用</option></select></div>
+    </div>
+    <footer class="editor-footer">
+      <div class="modal-status" id="accountModalStatus"></div>
+      <div class="editor-actions"><button class="secondary" id="cancelAccount">取消</button><button id="saveAccount">保存</button></div>
+    </footer>
+  </div>
+</section>
+<section id="confirmModal" class="modal hidden" aria-modal="true">
+  <div class="modal-card confirm-modal-card">
+    <header class="editor-tab">
+      <div class="modal-title" id="confirmTitle">确认操作</div>
+      <button class="icon" id="confirmClose" title="关闭">×</button>
+    </header>
+    <div class="confirm-body" id="confirmMessage"></div>
+    <footer class="editor-footer">
+      <div></div>
+      <div class="editor-actions"><button class="secondary" id="confirmCancel">取消</button><button id="confirmOk">确认</button></div>
+    </footer>
+  </div>
+</section>
+<script src="/vendor/ace/ace.js"></script>
+<script src="/vendor/ace/ext-language_tools.js"></script>
+<script src="/vendor/ace/theme-monokai.js"></script>
+<script src="/vendor/ace/mode-php.js"></script>
+<script src="/vendor/ace/mode-json.js"></script>
+<script src="/vendor/ace/mode-yaml.js"></script>
+<script src="/vendor/ace/mode-ini.js"></script>
+<script src="/vendor/ace/mode-text.js"></script>
 <script>
-const $=id=>document.getElementById(id);let token=localStorage.ccToken||'',current=null;
-async function api(path,opt={}){opt.headers={...(opt.headers||{}),Authorization:'Bearer '+token};if(opt.body){opt.headers['Content-Type']='application/json';opt.body=JSON.stringify(opt.body)}let r=await fetch(path,opt),j=await r.json();if(!r.ok||j.code!==0)throw Error(j.message||'请求失败');return j.data}
-function msg(text,error=false){let e=$('status');e.textContent=text;e.className='status '+(error?'error':'')}
-async function load(){let rows=await api('/api/admin/v1/config');$('items').innerHTML=rows.map(x=>`<div class="item ${current&&current.dataId===x.dataId&&current.group===x.group?'active':''}" data-g="${encodeURIComponent(x.group)}" data-d="${encodeURIComponent(x.dataId)}"><b>${x.dataId}</b><small>${x.group} · r${x.revision} · ${x.format}</small></div>`).join('')||'<div class="empty">暂无配置</div>';document.querySelectorAll('.item').forEach(e=>e.onclick=()=>openItem(decodeURIComponent(e.dataset.g),decodeURIComponent(e.dataset.d)))}
-async function openItem(group,dataId){let x=await api('/api/admin/v1/config/detail?group='+encodeURIComponent(group)+'&dataId='+encodeURIComponent(dataId));current=x;$('heading').textContent=x.dataId+' / '+x.group;$('dataId').value=x.dataId;$('group').value=x.group;$('format').value=x.format;$('content').value=x.content;$('editor').classList.remove('hidden');$('empty').classList.add('hidden');msg('当前版本 r'+x.revision);load()}
-$('loginForm').onsubmit=async e=>{e.preventDefault();let f=new FormData(e.target);try{let r=await fetch('/api/admin/v1/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.fromEntries(f))});let j=await r.json();if(!r.ok||j.code!==0)throw Error(j.message);token=j.data.token;localStorage.ccToken=token;$('who').textContent=j.data.username;$('login').style.display='none';$('app').style.display='block';load()}catch(x){$('loginStatus').textContent=x.message}};
-$('new').onclick=()=>{current=null;$('heading').textContent='新建配置';$('dataId').value='';$('group').value='DEFAULT_GROUP';$('format').value='php';$('content').value='<?php\nreturn [\n];\n';$('editor').classList.remove('hidden');$('empty').classList.add('hidden');msg('')};$('publish').onclick=async()=>{try{let body={namespace:'public',dataId:$('dataId').value,group:$('group').value,format:$('format').value,content:$('content').value,expectedRevision:current?.revision};let r=await api('/api/admin/v1/config/publish',{method:'POST',body});msg('已发布 r'+r.revision);await openItem(body.group,body.dataId)}catch(x){msg(x.message,true)}};$('reload').onclick=()=>current&&openItem(current.group,current.dataId);$('logout').onclick=()=>{localStorage.removeItem('ccToken');location.reload()};$('history').onclick=async()=>{if(!current)return;let h=await api('/api/admin/v1/config/history?group='+encodeURIComponent(current.group)+'&dataId='+encodeURIComponent(current.dataId));alert(h.map(x=>'r'+x.revision+'  '+x.created_at+'  '+x.note).join('\n')||'暂无历史')};
-</script></body></html>
+const $ = id => document.getElementById(id);
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
+let adminSession = localStorage.ccAdminSession || '';
+let current = null;
+let editor = null;
+let readonlyEditor = null;
+let configCache = new Map();
+let historyCache = new Map();
+let historyContext = null;
+let detailHistoryId = null;
+let accountCache = new Map();
+let editingAccountId = null;
+let toastTimer = null;
+let confirmResolver = null;
+
+function initEditor() {
+  if (editor || !window.ace) return;
+  ace.config.set('basePath', '/vendor/ace');
+  editor = ace.edit('codeEditor');
+  editor.setTheme('ace/theme/monokai');
+  editor.setOptions({
+    fontSize: 17,
+    tabSize: 4,
+    useSoftTabs: true,
+    showPrintMargin: false,
+    highlightActiveLine: true,
+    enableBasicAutocompletion: true,
+    enableLiveAutocompletion: false,
+    enableSnippets: true,
+  });
+  editor.session.setUseWorker(false);
+}
+
+function initReadonlyEditor() {
+  if (readonlyEditor || !window.ace) return;
+  ace.config.set('basePath', '/vendor/ace');
+  readonlyEditor = ace.edit('readonlyEditor');
+  readonlyEditor.setTheme('ace/theme/monokai');
+  readonlyEditor.setOptions({
+    fontSize: 16,
+    tabSize: 4,
+    useSoftTabs: true,
+    showPrintMargin: false,
+    highlightActiveLine: false,
+    readOnly: true,
+    cursorStyle: 'slim',
+  });
+  readonlyEditor.renderer.$cursorLayer.element.style.display = 'none';
+  readonlyEditor.session.setUseWorker(false);
+}
+
+function editorMode(format) {
+  return {
+    php: 'ace/mode/php',
+    json: 'ace/mode/json',
+    yaml: 'ace/mode/yaml',
+    yml: 'ace/mode/yaml',
+    ini: 'ace/mode/ini',
+    txt: 'ace/mode/text',
+  }[format] || 'ace/mode/text';
+}
+
+function setEditorMode() {
+  initEditor();
+  editor.session.setMode(editorMode($('format').value));
+  editor.session.setUseWorker(false);
+}
+
+function configKey(group, dataId) {
+  return encodeURIComponent(group) + '|' + encodeURIComponent(dataId);
+}
+
+function decodeConfigKey(key) {
+  return key.split('|').map(decodeURIComponent);
+}
+
+async function api(path, opt = {}) {
+  opt.headers = {...(opt.headers || {}), Authorization: 'Bearer ' + adminSession};
+  if (opt.body) {
+    opt.headers['Content-Type'] = 'application/json';
+    opt.body = JSON.stringify(opt.body);
+  }
+  const response = await fetch(path, opt);
+  const body = await response.json();
+  if (!response.ok || body.code !== 0) throw Error(body.message || '请求失败');
+  return body.data;
+}
+
+function showApp(username = '') {
+  $('who').textContent = username ? '已登录：' + username : '已登录';
+  $('login').style.display = 'none';
+  $('app').style.display = 'block';
+}
+
+function showPage(page) {
+  const isConfig = page === 'config';
+  $('configPage').classList.toggle('hidden', !isConfig);
+  $('accountPage').classList.toggle('hidden', isConfig);
+  $('navConfig').classList.toggle('active', isConfig);
+  $('navAccount').classList.toggle('active', !isConfig);
+}
+
+function setStatus(text, error = false) {
+  $('status').textContent = text;
+  $('status').className = 'status ' + (error ? 'error' : '');
+}
+
+function setModalStatus(text, error = false) {
+  $('modalStatus').textContent = text;
+  $('modalStatus').className = 'modal-status ' + (error ? 'error' : '');
+}
+
+function setDetailStatus(text, error = false) {
+  $('detailStatus').textContent = text;
+  $('detailStatus').className = 'modal-status ' + (error ? 'error' : '');
+}
+
+function setHistoryStatus(text, error = false) {
+  $('historyStatus').textContent = text;
+  $('historyStatus').className = 'modal-status ' + (error ? 'error' : '');
+}
+
+function setAccountStatus(text, error = false) {
+  $('accountStatus').textContent = text;
+  $('accountStatus').className = 'status ' + (error ? 'error' : '');
+}
+
+function setAccountModalStatus(text, error = false) {
+  $('accountModalStatus').textContent = text;
+  $('accountModalStatus').className = 'modal-status ' + (error ? 'error' : '');
+}
+
+function showToast(text, error = false) {
+  const toast = $('toast');
+  clearTimeout(toastTimer);
+  toast.textContent = text;
+  toast.className = 'toast show ' + (error ? 'error' : '');
+  toastTimer = setTimeout(() => {
+    toast.className = 'toast ' + (error ? 'error' : '');
+  }, 3600);
+}
+
+function confirmAction(title, message, okText = '确认') {
+  $('confirmTitle').textContent = title;
+  $('confirmMessage').textContent = message;
+  $('confirmOk').textContent = okText;
+  $('confirmModal').classList.remove('hidden');
+  return new Promise(resolve => {
+    confirmResolver = resolve;
+  });
+}
+
+function closeConfirmModal(result = false) {
+  $('confirmModal').classList.add('hidden');
+  if (confirmResolver) {
+    confirmResolver(result);
+    confirmResolver = null;
+  }
+}
+
+async function loadConfigs() {
+  const rows = await api('/api/admin/v1/config');
+  configCache = new Map(rows.map(row => [configKey(row.group, row.dataId), row]));
+  $('configRows').innerHTML = rows.map(row => `<tr>
+    <td><b>${escapeHtml(row.dataId)}</b></td>
+    <td>${escapeHtml(row.group)}</td>
+    <td><span class="tag">${escapeHtml(row.format)}</span></td>
+    <td>r${row.revision}</td>
+    <td class="mono">${escapeHtml(row.updatedAt || '-')}</td>
+    <td>
+      <button class="secondary small" data-detail-config="${configKey(row.group, row.dataId)}">详情</button>
+      <button class="secondary small" data-open-config="${configKey(row.group, row.dataId)}">编辑</button>
+      <button class="secondary small" data-history-config="${configKey(row.group, row.dataId)}">历史版本</button>
+    </td>
+  </tr>`).join('');
+  $('configEmpty').classList.toggle('hidden', rows.length > 0);
+  document.querySelectorAll('[data-detail-config]').forEach(button => {
+    button.onclick = () => {
+      const [group, dataId] = decodeConfigKey(button.dataset.detailConfig);
+      openConfigDetail(group, dataId);
+    };
+  });
+  document.querySelectorAll('[data-open-config]').forEach(button => {
+    button.onclick = () => {
+      const [group, dataId] = decodeConfigKey(button.dataset.openConfig);
+      openConfig(group, dataId);
+    };
+  });
+  document.querySelectorAll('[data-history-config]').forEach(button => {
+    button.onclick = () => {
+      const [group, dataId] = decodeConfigKey(button.dataset.historyConfig);
+      openHistoryModal(group, dataId);
+    };
+  });
+}
+
+function showConfigModal(item) {
+  initEditor();
+  current = item;
+  $('dataId').value = item.dataId || '';
+  $('group').value = item.group || 'DEFAULT_GROUP';
+  $('format').value = item.format || 'php';
+  $('modalFileName').textContent = item.dataId || 'new.php';
+  $('modalRevision').textContent = item.revision ? 'r' + item.revision : '新增配置';
+  $('configModal').classList.remove('hidden');
+  setEditorMode();
+  editor.setValue(item.content ?? "<?php\nreturn [\n];\n", -1);
+  $('reloadConfig').disabled = !item.revision;
+  setModalStatus(item.revision ? '当前版本 r' + item.revision : '');
+  setTimeout(() => { editor.resize(); editor.focus(); }, 0);
+}
+
+async function openConfig(group, dataId) {
+  const item = await api('/api/admin/v1/config/detail?group=' + encodeURIComponent(group) + '&dataId=' + encodeURIComponent(dataId));
+  showConfigModal(item);
+}
+
+async function openConfigDetail(group, dataId) {
+  try {
+    const item = await api('/api/admin/v1/config/detail?group=' + encodeURIComponent(group) + '&dataId=' + encodeURIComponent(dataId));
+    showReadonlyModal(item, {
+      title: '配置详情',
+      meta: item.revision ? 'r' + item.revision : '',
+      status: '当前配置，只读不可修改',
+    });
+  } catch (error) {
+    setStatus(error.message, true);
+  }
+}
+
+function showReadonlyModal(item, options = {}) {
+  initReadonlyEditor();
+  detailHistoryId = options.historyId || null;
+  $('detailTitle').textContent = options.title || item.dataId || '配置详情';
+  $('detailMeta').textContent = options.meta || '';
+  $('detailDataId').value = item.dataId || item.data_id || '';
+  $('detailGroup').value = item.group || item.config_group || 'DEFAULT_GROUP';
+  $('detailFormat').value = item.format || 'txt';
+  $('detailModal').classList.remove('hidden');
+  readonlyEditor.session.setMode(editorMode(item.format || 'txt'));
+  readonlyEditor.session.setUseWorker(false);
+  readonlyEditor.setValue(item.content || '', -1);
+  readonlyEditor.setReadOnly(true);
+  $('publishHistoryFromDetail').classList.toggle('hidden', !detailHistoryId);
+  setDetailStatus(options.status || '');
+  setTimeout(() => { readonlyEditor.resize(); }, 0);
+}
+
+function newConfig() {
+  showConfigModal({namespace: 'public', group: 'DEFAULT_GROUP', dataId: '', format: 'php', content: "<?php\nreturn [\n];\n", revision: 0});
+}
+
+function closeConfigModal() {
+  $('configModal').classList.add('hidden');
+  setModalStatus('');
+}
+
+function closeDetailModal() {
+  $('detailModal').classList.add('hidden');
+  setDetailStatus('');
+  detailHistoryId = null;
+}
+
+function closeHistoryModal() {
+  $('historyModal').classList.add('hidden');
+  setHistoryStatus('');
+}
+
+async function publishConfig() {
+  const publishButton = $('publish');
+  try {
+    publishButton.disabled = true;
+    setModalStatus('正在发布...');
+    const body = {
+      namespace: 'public',
+      dataId: $('dataId').value,
+      group: $('group').value,
+      format: $('format').value,
+      content: editor.getValue(),
+      expectedRevision: current?.revision || undefined
+    };
+    const result = await api('/api/admin/v1/config/publish', {method: 'POST', body});
+    await loadConfigs();
+    current = {...body, revision: result.revision, content: body.content};
+    $('modalFileName').textContent = body.dataId;
+    $('modalRevision').textContent = 'r' + result.revision;
+    $('reloadConfig').disabled = false;
+    setModalStatus('');
+    showToast('发布成功，当前版本 r' + result.revision);
+  } catch (error) {
+    setModalStatus(error.message, true);
+    showToast(error.message, true);
+  } finally {
+    publishButton.disabled = false;
+  }
+}
+
+async function openHistoryModal(group, dataId) {
+  try {
+    const key = configKey(group, dataId);
+    const config = configCache.get(key);
+    historyContext = {
+      group,
+      dataId,
+      revision: Number(config?.revision || 0),
+    };
+    const rows = await api('/api/admin/v1/config/history?group=' + encodeURIComponent(group) + '&dataId=' + encodeURIComponent(dataId));
+    historyCache = new Map(rows.map(row => [String(row.id), row]));
+    $('historyTitle').textContent = '历史版本';
+    $('historyMeta').textContent = `${dataId} / ${group}`;
+    $('historyRows').innerHTML = rows.map(row => `<tr>
+      <td>r${row.revision}</td>
+      <td class="mono">${escapeHtml(row.created_at || row.createdAt || '-')}</td>
+      <td>${escapeHtml(row.operator || '-')}</td>
+      <td>${escapeHtml(row.note || '-')}</td>
+      <td>
+        <button class="secondary small" data-history-detail="${row.id}">查看详情</button>
+        <button class="small" data-history-publish="${row.id}">发布为最新版本</button>
+      </td>
+    </tr>`).join('');
+    $('historyEmpty').classList.toggle('hidden', rows.length > 0);
+    $('historyModal').classList.remove('hidden');
+    setHistoryStatus(rows.length ? `共 ${rows.length} 个历史版本` : '');
+    document.querySelectorAll('[data-history-detail]').forEach(button => {
+      button.onclick = () => openHistoryDetail(button.dataset.historyDetail);
+    });
+    document.querySelectorAll('[data-history-publish]').forEach(button => {
+      button.onclick = () => publishHistoryVersion(button.dataset.historyPublish);
+    });
+  } catch (error) {
+    setStatus(error.message, true);
+  }
+}
+
+function openHistoryDetail(historyId) {
+  const row = historyCache.get(String(historyId));
+  if (!row) return;
+  showReadonlyModal({
+    dataId: row.data_id,
+    group: row.config_group,
+    format: row.format,
+    content: row.content,
+  }, {
+    title: '历史版本详情',
+    meta: 'r' + row.revision,
+    status: `发布时间：${row.created_at || '-'}，操作人：${row.operator || '-'}`,
+    historyId: row.id,
+  });
+}
+
+async function publishHistoryVersion(historyId) {
+  const row = historyCache.get(String(historyId));
+  if (!row || !historyContext) return;
+  const confirmed = await confirmAction(
+    '发布历史版本',
+    `确认把 ${historyContext.dataId} 的 r${row.revision} 发布为最新版本吗？发布后会生成一个新的最新版本。`,
+    '发布为最新版本'
+  );
+  if (!confirmed) {
+    return;
+  }
+  try {
+    setHistoryStatus('正在发布历史版本...');
+    const result = await api('/api/admin/v1/config/rollback', {
+      method: 'POST',
+      body: {
+        historyId: row.id,
+        expectedRevision: historyContext.revision || undefined,
+      }
+    });
+    await loadConfigs();
+    historyContext.revision = Number(result.revision || 0);
+    closeDetailModal();
+    await openHistoryModal(historyContext.group, historyContext.dataId);
+    showToast(`发布成功，当前版本 r${result.revision}`);
+  } catch (error) {
+    setHistoryStatus(error.message, true);
+    setDetailStatus(error.message, true);
+    showToast(error.message, true);
+  }
+}
+
+async function loadAccounts() {
+  const rows = await api('/api/admin/v1/clientAccount');
+  accountCache = new Map(rows.map(row => [String(row.id), row]));
+  $('accountRows').innerHTML = rows.map(row => {
+    const status = row.enabled ? '<span class="tag">启用</span>' : '<span class="tag off">停用</span>';
+    const action = `<button class="secondary" data-edit-account="${row.id}">编辑</button>${row.enabled ? ` <button class="danger" data-disable-account="${row.id}">停用</button>` : ''}`;
+    return `<tr><td><b>${escapeHtml(row.name)}</b></td><td class="mono">${escapeHtml(row.username)}</td><td>${status}</td><td class="mono">${escapeHtml(row.lastUsedAt || '-')}</td><td>${action}</td></tr>`;
+  }).join('');
+  $('accountEmpty').classList.toggle('hidden', rows.length > 0);
+  document.querySelectorAll('[data-edit-account]').forEach(button => {
+    button.onclick = () => openAccountModal(accountCache.get(String(button.dataset.editAccount)));
+  });
+  document.querySelectorAll('[data-disable-account]').forEach(button => {
+    button.onclick = () => disableAccount(button.dataset.disableAccount);
+  });
+}
+
+function openAccountModal(account = null) {
+  editingAccountId = account ? Number(account.id) : null;
+  $('accountModalTitle').textContent = account ? '编辑客户端账号' : '新增客户端账号';
+  $('accountName').value = account?.name || '';
+  $('accountUsername').value = account?.username || '';
+  $('accountPassword').value = '';
+  $('accountEnabled').value = account && !account.enabled ? '0' : '1';
+  $('accountModal').classList.remove('hidden');
+  setAccountModalStatus(account ? '编辑时密码留空表示不修改' : '');
+  setTimeout(() => $('accountName').focus(), 0);
+}
+
+function closeAccountModal() {
+  $('accountModal').classList.add('hidden');
+  setAccountModalStatus('');
+}
+
+async function saveAccount() {
+  try {
+    const body = {
+      name: $('accountName').value,
+      username: $('accountUsername').value,
+      password: $('accountPassword').value,
+      enabled: $('accountEnabled').value === '1',
+    };
+    if (editingAccountId) body.id = editingAccountId;
+    await api(editingAccountId ? '/api/admin/v1/clientAccount/update' : '/api/admin/v1/clientAccount', {
+      method: 'POST',
+      body
+    });
+    closeAccountModal();
+    showToast(editingAccountId ? '客户端账号已更新' : '客户端账号已创建');
+    await loadAccounts();
+  } catch (error) {
+    setAccountModalStatus(error.message, true);
+    showToast(error.message, true);
+  }
+}
+
+async function disableAccount(id) {
+  const account = accountCache.get(String(id));
+  const confirmed = await confirmAction(
+    '停用客户端账号',
+    `确认停用客户端账号「${account?.name || account?.username || id}」吗？停用后业务项目将不能再用这个账号读取配置。`,
+    '停用账号'
+  );
+  if (!confirmed) return;
+  try {
+    await api('/api/admin/v1/clientAccount/disable', {method: 'POST', body: {id}});
+    showToast('客户端账号已停用');
+    await loadAccounts();
+  } catch (error) {
+    setAccountStatus(error.message, true);
+    showToast(error.message, true);
+  }
+}
+
+$('loginForm').onsubmit = async event => {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  try {
+    const response = await fetch('/api/admin/v1/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(Object.fromEntries(form))
+    });
+    const body = await response.json();
+    if (!response.ok || body.code !== 0) throw Error(body.message || '登录失败');
+    adminSession = body.data.token;
+    localStorage.ccAdminSession = adminSession;
+    showApp(body.data.username);
+    showPage('config');
+    await loadConfigs();
+  } catch (error) {
+    $('loginStatus').textContent = error.message;
+  }
+};
+
+$('navConfig').onclick = () => {showPage('config'); loadConfigs().catch(error => setStatus(error.message, true));};
+$('navAccount').onclick = () => {showPage('account'); loadAccounts().catch(error => setAccountStatus(error.message, true));};
+$('refreshConfig').onclick = () => loadConfigs().catch(error => setStatus(error.message, true));
+$('refreshAccount').onclick = () => loadAccounts().catch(error => setAccountStatus(error.message, true));
+$('newConfig').onclick = newConfig;
+$('newAccount').onclick = () => openAccountModal();
+$('publish').onclick = publishConfig;
+$('reloadConfig').onclick = () => current?.revision && openConfig($('group').value, $('dataId').value);
+$('saveAccount').onclick = saveAccount;
+$('closeConfigModal').onclick = closeConfigModal;
+$('closeDetailModal').onclick = closeDetailModal;
+$('closeDetailModalFooter').onclick = closeDetailModal;
+$('closeHistoryModal').onclick = closeHistoryModal;
+$('closeHistoryModalFooter').onclick = closeHistoryModal;
+$('publishHistoryFromDetail').onclick = () => detailHistoryId && publishHistoryVersion(detailHistoryId);
+$('closeAccountModal').onclick = closeAccountModal;
+$('cancelAccount').onclick = closeAccountModal;
+$('confirmClose').onclick = () => closeConfirmModal(false);
+$('confirmCancel').onclick = () => closeConfirmModal(false);
+$('confirmOk').onclick = () => closeConfirmModal(true);
+$('format').onchange = setEditorMode;
+$('dataId').oninput = () => {$('modalFileName').textContent = $('dataId').value || 'new.php';};
+$('logout').onclick = () => {localStorage.removeItem('ccAdminSession'); location.reload();};
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') {
+    if (!$('confirmModal').classList.contains('hidden')) return closeConfirmModal(false);
+    if (!$('detailModal').classList.contains('hidden')) return closeDetailModal();
+    if (!$('historyModal').classList.contains('hidden')) return closeHistoryModal();
+    if (!$('configModal').classList.contains('hidden')) return closeConfigModal();
+    if (!$('accountModal').classList.contains('hidden')) return closeAccountModal();
+  }
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's' && !$('configModal').classList.contains('hidden')) {
+    event.preventDefault();
+    publishConfig();
+  }
+});
+
+if (adminSession) {
+  showApp();
+  showPage('config');
+  loadConfigs().catch(() => {
+    localStorage.removeItem('ccAdminSession');
+    location.reload();
+  });
+}
+</script>
+</body>
+</html>

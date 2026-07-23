@@ -1,7 +1,7 @@
 <?php
 
 use app\admin\controller\ConfigController;
-use app\admin\controller\ClientTokenController;
+use app\admin\controller\ClientAccountController;
 use app\admin\controller\AuthController;
 use app\admin\middleware\AdminAuthMiddleware;
 use Webman\Route;
@@ -14,5 +14,8 @@ Route::group('/api/admin/v1', function () {
     Route::get('/config/history', [ConfigController::class, 'history']);
     Route::post('/config/publish', [ConfigController::class, 'publish']);
     Route::post('/config/rollback', [ConfigController::class, 'rollback']);
-    Route::post('/clientToken', [ClientTokenController::class, 'create']);
+    Route::get('/clientAccount', [ClientAccountController::class, 'index']);
+    Route::post('/clientAccount', [ClientAccountController::class, 'create']);
+    Route::post('/clientAccount/update', [ClientAccountController::class, 'update']);
+    Route::post('/clientAccount/disable', [ClientAccountController::class, 'disable']);
 })->middleware(AdminAuthMiddleware::class);

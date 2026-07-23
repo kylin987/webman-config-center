@@ -23,7 +23,7 @@ return [
     'webman' => [
         'handler' => Http::class,
         'listen' => 'http://0.0.0.0:8787',
-        'count' => cpu_count() * 4,
+        'count' => max(1, (int) (getenv('WEBMAN_HTTP_WORKERS') ?: 2)),
         'user' => '',
         'group' => '',
         'reusePort' => false,
