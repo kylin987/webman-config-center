@@ -115,7 +115,7 @@ class ClientIpWhitelistServer
     public function clientIp(Request $request): string
     {
         $candidates = [];
-        foreach (['x-forwarded-for', 'x-real-ip'] as $header) {
+        foreach (['ali-cdn-real-ip', 'x-forwarded-for', 'x-real-ip'] as $header) {
             $value = (string) $request->header($header, '');
             foreach (explode(',', $value) as $ip) {
                 $candidates[] = trim($ip);
