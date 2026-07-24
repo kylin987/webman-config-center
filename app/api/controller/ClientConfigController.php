@@ -3,6 +3,7 @@
 namespace app\api\controller;
 
 use app\common\server\ClientConfigServer;
+use app\common\server\ClientIpWhitelistServer;
 use InvalidArgumentException;
 use support\Request;
 use support\Response;
@@ -12,6 +13,7 @@ class ClientConfigController
     public function show(Request $request): Response
     {
         try {
+            (new ClientIpWhitelistServer())->assertAllowed($request);
             [$username, $password] = $this->clientCredentials($request);
             $account = (new ClientConfigServer())->authenticate($username, $password);
             $namespace = (string) ($request->get('namespace') ?: config('config-center.default_namespace'));

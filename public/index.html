@@ -176,6 +176,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
       <div class="menu">
         <button id="navConfig" class="active">配置管理</button>
         <button id="navAccount">客户端账号</button>
+        <button id="navIpWhitelist">IP 白名单</button>
         <button id="navGuide">接入说明</button>
       </div>
       <div class="nav-foot">
@@ -214,6 +215,28 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
           <div id="accountEmpty" class="empty hidden">暂无客户端账号</div>
         </div>
         <div class="status" id="accountStatus"></div>
+      </section>
+      <section id="ipWhitelistPage" class="hidden">
+        <div class="page-head">
+          <div><h1>IP 白名单</h1><p>只限制客户端配置读取接口。系统内置内网网段默认放行，外网项目访问时在这里手动添加公网 IP。</p></div>
+          <div class="toolbar"><button class="secondary" id="refreshIpWhitelist">刷新</button><button id="newIpWhitelist">新增外网 IP</button></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>系统内置白名单</h2><span class="mono">不可删除</span></div>
+          <table class="table">
+            <thead><tr><th>名称</th><th>IP/CIDR</th><th>说明</th></tr></thead>
+            <tbody id="builtinIpRows"></tbody>
+          </table>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>外网手动白名单</h2><span class="mono">支持单个 IP 或 CIDR</span></div>
+          <table class="table">
+            <thead><tr><th>名称</th><th>IP/CIDR</th><th>状态</th><th>备注</th><th>更新时间</th><th>操作</th></tr></thead>
+            <tbody id="manualIpRows"></tbody>
+          </table>
+          <div id="ipWhitelistEmpty" class="empty hidden">暂无外网白名单</div>
+        </div>
+        <div class="status" id="ipWhitelistStatus"></div>
       </section>
       <section id="guidePage" class="hidden">
         <div class="page-head">
@@ -391,6 +414,24 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
     </footer>
   </div>
 </section>
+<section id="ipWhitelistModal" class="modal hidden" aria-modal="true">
+  <div class="modal-card account-modal-card">
+    <header class="editor-tab">
+      <div class="modal-title" id="ipWhitelistModalTitle">新增外网 IP</div>
+      <button class="icon" id="closeIpWhitelistModal" title="关闭">×</button>
+    </header>
+    <div class="account-modal-body">
+      <div class="field"><label>名称</label><input id="ipWhitelistName" placeholder="例如 yhs-ticket-img 外网"></div>
+      <div class="field"><label>IP/CIDR</label><input id="ipWhitelistCidr" placeholder="例如 1.2.3.4 或 1.2.3.0/24"></div>
+      <div class="field"><label>状态</label><select id="ipWhitelistEnabled"><option value="1">启用</option><option value="0">停用</option></select></div>
+      <div class="field"><label>备注</label><input id="ipWhitelistRemark" placeholder="可选"></div>
+    </div>
+    <footer class="editor-footer">
+      <div class="modal-status" id="ipWhitelistModalStatus"></div>
+      <div class="editor-actions"><button class="secondary" id="cancelIpWhitelist">取消</button><button id="saveIpWhitelist">保存</button></div>
+    </footer>
+  </div>
+</section>
 <section id="confirmModal" class="modal hidden" aria-modal="true">
   <div class="modal-card confirm-modal-card">
     <header class="editor-tab">
@@ -427,8 +468,10 @@ let historyCache = new Map();
 let historyContext = null;
 let detailHistoryId = null;
 let accountCache = new Map();
+let ipWhitelistCache = new Map();
 let guideCache = null;
 let editingAccountId = null;
+let editingIpWhitelistId = null;
 let toastTimer = null;
 let confirmResolver = null;
 let mfaChallengeToken = '';
@@ -530,14 +573,17 @@ function showApp(username = '') {
 function showPage(page) {
   const isConfig = page === 'config';
   const isAccount = page === 'account';
+  const isIpWhitelist = page === 'ipWhitelist';
   const isGuide = page === 'guide';
   const isProfile = page === 'profile';
   $('configPage').classList.toggle('hidden', !isConfig);
   $('accountPage').classList.toggle('hidden', !isAccount);
+  $('ipWhitelistPage').classList.toggle('hidden', !isIpWhitelist);
   $('guidePage').classList.toggle('hidden', !isGuide);
   $('profilePage').classList.toggle('hidden', !isProfile);
   $('navConfig').classList.toggle('active', isConfig);
   $('navAccount').classList.toggle('active', isAccount);
+  $('navIpWhitelist').classList.toggle('active', isIpWhitelist);
   $('navGuide').classList.toggle('active', isGuide);
 }
 
@@ -569,6 +615,16 @@ function setAccountStatus(text, error = false) {
 function setAccountModalStatus(text, error = false) {
   $('accountModalStatus').textContent = text;
   $('accountModalStatus').className = 'modal-status ' + (error ? 'error' : '');
+}
+
+function setIpWhitelistStatus(text, error = false) {
+  $('ipWhitelistStatus').textContent = text;
+  $('ipWhitelistStatus').className = 'status ' + (error ? 'error' : '');
+}
+
+function setIpWhitelistModalStatus(text, error = false) {
+  $('ipWhitelistModalStatus').textContent = text;
+  $('ipWhitelistModalStatus').className = 'modal-status ' + (error ? 'error' : '');
 }
 
 function setGuideStatus(text, error = false) {
@@ -1028,6 +1084,94 @@ async function disableAccount(id) {
   }
 }
 
+async function loadIpWhitelist() {
+  const data = await api('/api/admin/v1/clientIpWhitelist');
+  const builtin = data.builtin || [];
+  const manual = data.manual || [];
+  ipWhitelistCache = new Map(manual.map(row => [String(row.id), row]));
+  $('builtinIpRows').innerHTML = builtin.map(row => `<tr>
+    <td><b>${escapeHtml(row.name)}</b></td>
+    <td class="mono">${escapeHtml(row.cidr)}</td>
+    <td>${escapeHtml(row.remark || '-')}</td>
+  </tr>`).join('');
+  $('manualIpRows').innerHTML = manual.map(row => {
+    const status = row.enabled ? '<span class="tag">启用</span>' : '<span class="tag off">停用</span>';
+    return `<tr>
+      <td><b>${escapeHtml(row.name || '-')}</b></td>
+      <td class="mono">${escapeHtml(row.cidr)}</td>
+      <td>${status}</td>
+      <td>${escapeHtml(row.remark || '-')}</td>
+      <td class="mono">${escapeHtml(row.updatedAt || row.createdAt || '-')}</td>
+      <td><button class="secondary" data-edit-ip="${row.id}">编辑</button> <button class="danger" data-delete-ip="${row.id}">删除</button></td>
+    </tr>`;
+  }).join('');
+  $('ipWhitelistEmpty').classList.toggle('hidden', manual.length > 0);
+  document.querySelectorAll('[data-edit-ip]').forEach(button => {
+    button.onclick = () => openIpWhitelistModal(ipWhitelistCache.get(String(button.dataset.editIp)));
+  });
+  document.querySelectorAll('[data-delete-ip]').forEach(button => {
+    button.onclick = () => deleteIpWhitelist(button.dataset.deleteIp);
+  });
+  setIpWhitelistStatus('');
+}
+
+function openIpWhitelistModal(rule = null) {
+  editingIpWhitelistId = rule ? Number(rule.id) : null;
+  $('ipWhitelistModalTitle').textContent = rule ? '编辑外网 IP' : '新增外网 IP';
+  $('ipWhitelistName').value = rule?.name || '';
+  $('ipWhitelistCidr').value = rule?.cidr || '';
+  $('ipWhitelistEnabled').value = rule && !rule.enabled ? '0' : '1';
+  $('ipWhitelistRemark').value = rule?.remark || '';
+  $('ipWhitelistModal').classList.remove('hidden');
+  setIpWhitelistModalStatus('');
+  setTimeout(() => $('ipWhitelistCidr').focus(), 0);
+}
+
+function closeIpWhitelistModal() {
+  $('ipWhitelistModal').classList.add('hidden');
+  setIpWhitelistModalStatus('');
+}
+
+async function saveIpWhitelist() {
+  try {
+    const body = {
+      name: $('ipWhitelistName').value,
+      cidr: $('ipWhitelistCidr').value,
+      enabled: $('ipWhitelistEnabled').value === '1',
+      remark: $('ipWhitelistRemark').value,
+    };
+    if (editingIpWhitelistId) body.id = editingIpWhitelistId;
+    await api(editingIpWhitelistId ? '/api/admin/v1/clientIpWhitelist/update' : '/api/admin/v1/clientIpWhitelist', {
+      method: 'POST',
+      body
+    });
+    closeIpWhitelistModal();
+    showToast(editingIpWhitelistId ? 'IP 白名单已更新' : 'IP 白名单已添加');
+    await loadIpWhitelist();
+  } catch (error) {
+    setIpWhitelistModalStatus(error.message, true);
+    showToast(error.message, true);
+  }
+}
+
+async function deleteIpWhitelist(id) {
+  const rule = ipWhitelistCache.get(String(id));
+  const confirmed = await confirmAction(
+    '删除 IP 白名单',
+    `确认删除「${rule?.cidr || id}」吗？删除后该外网客户端将不能再读取配置。`,
+    '删除'
+  );
+  if (!confirmed) return;
+  try {
+    await api('/api/admin/v1/clientIpWhitelist/delete', {method: 'POST', body: {id}});
+    showToast('IP 白名单已删除');
+    await loadIpWhitelist();
+  } catch (error) {
+    setIpWhitelistStatus(error.message, true);
+    showToast(error.message, true);
+  }
+}
+
 function currentClientEndpoint(guide) {
   const adminPath = String(guide?.adminPath || adminBasePath || '').replace(/\/+$/, '');
   const pathname = location.pathname.replace(/\/+$/, '');
@@ -1292,20 +1436,24 @@ $('loginForm').onsubmit = async event => {
 
 $('navConfig').onclick = () => {showPage('config'); loadConfigs().catch(error => setStatus(error.message, true));};
 $('navAccount').onclick = () => {showPage('account'); loadAccounts().catch(error => setAccountStatus(error.message, true));};
+$('navIpWhitelist').onclick = () => {showPage('ipWhitelist'); loadIpWhitelist().catch(error => setIpWhitelistStatus(error.message, true));};
 $('navGuide').onclick = () => {showPage('guide'); loadGuide().catch(error => setGuideStatus(error.message, true));};
 $('profileEntry').onclick = () => {showPage('profile'); loadProfile().catch(error => setProfileStatus(error.message, true));};
 $('refreshConfig').onclick = () => loadConfigs().catch(error => setStatus(error.message, true));
 $('refreshAccount').onclick = () => loadAccounts().catch(error => setAccountStatus(error.message, true));
+$('refreshIpWhitelist').onclick = () => loadIpWhitelist().catch(error => setIpWhitelistStatus(error.message, true));
 $('refreshGuide').onclick = () => loadGuide().catch(error => setGuideStatus(error.message, true));
 $('refreshProfile').onclick = () => loadProfile().catch(error => setProfileStatus(error.message, true));
 $('newConfig').onclick = newConfig;
 $('exportConfig').onclick = exportConfigZip;
 $('openImportConfig').onclick = openImportModal;
 $('newAccount').onclick = () => openAccountModal();
+$('newIpWhitelist').onclick = () => openIpWhitelistModal();
 $('publish').onclick = publishConfig;
 $('reloadConfig').onclick = () => current?.revision && openConfig($('group').value, $('dataId').value);
 $('importConfig').onclick = importConfigZip;
 $('saveAccount').onclick = saveAccount;
+$('saveIpWhitelist').onclick = saveIpWhitelist;
 $('changePassword').onclick = changeProfilePassword;
 $('startMfaSetup').onclick = startProfileMfaSetup;
 $('cancelMfaSetup').onclick = cancelProfileMfaSetup;
@@ -1321,6 +1469,8 @@ $('closeImportModal').onclick = closeImportModal;
 $('cancelImport').onclick = closeImportModal;
 $('closeAccountModal').onclick = closeAccountModal;
 $('cancelAccount').onclick = closeAccountModal;
+$('closeIpWhitelistModal').onclick = closeIpWhitelistModal;
+$('cancelIpWhitelist').onclick = closeIpWhitelistModal;
 $('confirmClose').onclick = () => closeConfirmModal(false);
 $('confirmCancel').onclick = () => closeConfirmModal(false);
 $('confirmOk').onclick = () => closeConfirmModal(true);
@@ -1347,6 +1497,7 @@ document.addEventListener('keydown', event => {
     if (!$('configModal').classList.contains('hidden')) return closeConfigModal();
     if (!$('importModal').classList.contains('hidden')) return closeImportModal();
     if (!$('accountModal').classList.contains('hidden')) return closeAccountModal();
+    if (!$('ipWhitelistModal').classList.contains('hidden')) return closeIpWhitelistModal();
   }
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's' && !$('configModal').classList.contains('hidden')) {
     event.preventDefault();

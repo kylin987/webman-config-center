@@ -3,6 +3,7 @@
 use app\admin\controller\ConfigController;
 use app\admin\controller\ClientAccountController;
 use app\admin\controller\ClientGuideController;
+use app\admin\controller\ClientIpWhitelistController;
 use app\admin\controller\AuthController;
 use app\admin\middleware\AdminAuthMiddleware;
 use Webman\Route;
@@ -31,4 +32,8 @@ Route::group($adminPrefix . '/api/admin/v1', function () {
     Route::post('/clientAccount/update', [ClientAccountController::class, 'update']);
     Route::post('/clientAccount/disable', [ClientAccountController::class, 'disable']);
     Route::get('/clientGuide', [ClientGuideController::class, 'index']);
+    Route::get('/clientIpWhitelist', [ClientIpWhitelistController::class, 'index']);
+    Route::post('/clientIpWhitelist', [ClientIpWhitelistController::class, 'create']);
+    Route::post('/clientIpWhitelist/update', [ClientIpWhitelistController::class, 'update']);
+    Route::post('/clientIpWhitelist/delete', [ClientIpWhitelistController::class, 'delete']);
 })->middleware(AdminAuthMiddleware::class);

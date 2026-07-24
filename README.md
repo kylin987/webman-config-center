@@ -11,6 +11,7 @@
 - 配置管理：新增、编辑、详情、删除、历史版本、发布历史版本为最新版本。
 - 批量迁移：支持批量导出 zip，支持导入本系统 zip 和 Nacos 导出的配置 zip。
 - 客户端账号：通过账号密码给业务项目读取配置。
+- 客户端 IP 白名单：只限制客户端读取 API，内网网段默认放行，外网 IP 可在后台手动添加。
 - 数据持久化：MySQL 保存配置、历史版本、账号和登录会话。
 - 变更通知：发布配置后写入 outbox，并通过 Redis Pub/Sub 广播变更事件。
 - 轻量运行：基于 Webman，默认 2 个 HTTP worker + 1 个 outbox 进程。
@@ -66,6 +67,7 @@ WEBMAN_HTTP_WORKERS=2
 ```bash
 mysql -h127.0.0.1 -P3306 -u config_center -p config_center < sql/001_config_center.sql
 mysql -h127.0.0.1 -P3306 -u config_center -p config_center < sql/002_admin_session.sql
+mysql -h127.0.0.1 -P3306 -u config_center -p config_center < sql/003_client_ip_whitelist.sql
 ```
 
 启动服务：
@@ -145,6 +147,21 @@ GET /api/client/v1/config?namespace=public&group=DEFAULT_GROUP&dataId=app.php
 ```
 
 客户端账号在管理后台的“客户端账号”菜单中创建。
+
+客户端读取 API 会校验 IP 白名单。系统内置放行本机和常见内网网段：
+
+```text
+127.0.0.1/32
+::1/128
+10.0.0.0/8
+172.16.0.0/12
+192.168.0.0/16
+100.64.0.0/10
+fc00::/7
+fe80::/10
+```
+
+ACK 内部、ECS 内网通常无需额外配置；外网业务项目需要在后台“IP 白名单”菜单手动添加公网 IP 或 CIDR。白名单不限制管理后台，避免误配置导致管理员无法登录。
 
 业务项目推荐使用独立客户端 Composer 包：
 
