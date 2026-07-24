@@ -361,6 +361,8 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 <script>
 const $ = id => document.getElementById(id);
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
+const adminBasePath = location.pathname.replace(/\/+$/, '');
+const adminApiPrefix = adminBasePath + '/api/admin/v1';
 let adminSession = localStorage.ccAdminSession || '';
 let current = null;
 let editor = null;
@@ -438,13 +440,20 @@ function decodeConfigKey(key) {
   return key.split('|').map(decodeURIComponent);
 }
 
+function adminApiPath(path) {
+  if (path.startsWith('/api/admin/v1')) {
+    return adminBasePath + path;
+  }
+  return adminApiPrefix + (path.startsWith('/') ? path : '/' + path);
+}
+
 async function api(path, opt = {}) {
   opt.headers = {...(opt.headers || {}), Authorization: 'Bearer ' + adminSession};
   if (opt.body && !(opt.body instanceof FormData)) {
     opt.headers['Content-Type'] = 'application/json';
     opt.body = JSON.stringify(opt.body);
   }
-  const response = await fetch(path, opt);
+  const response = await fetch(adminApiPath(path), opt);
   const body = await response.json();
   if (!response.ok || body.code !== 0) throw Error(body.message || '请求失败');
   return body.data;
@@ -599,7 +608,7 @@ function closeImportModal() {
 
 async function exportConfigZip() {
   try {
-    const response = await fetch('/api/admin/v1/config/export', {
+    const response = await fetch(adminApiPath('/api/admin/v1/config/export'), {
       headers: {Authorization: 'Bearer ' + adminSession}
     });
     if (!response.ok) {
@@ -1124,7 +1133,7 @@ $('loginForm').onsubmit = async event => {
     const payload = mfaChallengeToken
       ? {challengeToken: mfaChallengeToken, code: $('mfaCode').value}
       : Object.fromEntries(form);
-    const response = await fetch(path, {
+    const response = await fetch(adminApiPath(path), {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(payload)

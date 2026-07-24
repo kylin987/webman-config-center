@@ -18,9 +18,13 @@ Route::get('/health', function () {
     return json(['status' => 'ok']);
 });
 
-Route::get('/', function () {
+$adminPath = (string) config('config-center.admin_path', '/cc-admin');
+$adminPage = function () {
     return response((string) file_get_contents(public_path('index.html')))->withHeader('Content-Type', 'text/html; charset=utf-8');
-});
+};
+
+Route::get($adminPath, $adminPage);
+Route::get($adminPath . '/', $adminPage);
 
 foreach (glob(base_path() . '/app/api/route/*.php') as $filename) {
     include_once $filename;
@@ -30,8 +34,11 @@ foreach (glob(base_path() . '/app/admin/route/*.php') as $filename) {
     include_once $filename;
 }
 
-Route::disableDefaultRoute();
+Route::fallback(function () {
+    return json(['code' => 404, 'message' => '404 not found'])->withStatus(404);
+});
 
+Route::disableDefaultRoute();
 
 
 

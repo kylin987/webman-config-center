@@ -56,6 +56,7 @@ REDIS_PASSWORD=
 
 CONFIG_CENTER_BOOTSTRAP_USERNAME=admin
 CONFIG_CENTER_BOOTSTRAP_PASSWORD=replace-with-a-random-secret
+CONFIG_CENTER_ADMIN_PATH=/cc-admin
 APP_DEBUG=0
 WEBMAN_HTTP_WORKERS=2
 ```
@@ -76,8 +77,16 @@ php start.php start
 访问：
 
 ```text
-http://127.0.0.1:8787/
+http://127.0.0.1:8787/cc-admin/
 ```
+
+管理后台默认不挂在根目录，默认目录为 `/cc-admin`。如需修改，可调整 `.env`：
+
+```dotenv
+CONFIG_CENTER_ADMIN_PATH=/your-admin-path
+```
+
+修改后重启服务生效。根目录 `/` 默认返回 404，避免随便访问域名根路径就进入管理后台。
 
 健康检查：
 

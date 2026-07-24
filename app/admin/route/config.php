@@ -6,9 +6,11 @@ use app\admin\controller\AuthController;
 use app\admin\middleware\AdminAuthMiddleware;
 use Webman\Route;
 
-Route::post('/api/admin/v1/auth/login', [AuthController::class, 'login']);
-Route::post('/api/admin/v1/auth/mfa/verify', [AuthController::class, 'verifyMfa']);
-Route::group('/api/admin/v1', function () {
+$adminPrefix = (string) config('config-center.admin_path', '/cc-admin');
+
+Route::post($adminPrefix . '/api/admin/v1/auth/login', [AuthController::class, 'login']);
+Route::post($adminPrefix . '/api/admin/v1/auth/mfa/verify', [AuthController::class, 'verifyMfa']);
+Route::group($adminPrefix . '/api/admin/v1', function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/profile', [AuthController::class, 'profile']);
     Route::post('/profile/password', [AuthController::class, 'changePassword']);
