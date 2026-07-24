@@ -6,12 +6,17 @@ use app\common\server\ClientIpWhitelistServer;
 use InvalidArgumentException;
 use support\Request;
 use support\Response;
+use Throwable;
 
 class ClientIpWhitelistController
 {
     public function index(Request $request): Response
     {
-        return json(['code' => 0, 'data' => (new ClientIpWhitelistServer())->list()]);
+        try {
+            return json(['code' => 0, 'data' => (new ClientIpWhitelistServer())->list()]);
+        } catch (Throwable $exception) {
+            return json(['code' => 500, 'message' => 'IP 白名单读取失败，请确认已导入 sql/003_client_ip_whitelist.sql'])->withStatus(500);
+        }
     }
 
     public function create(Request $request): Response
@@ -25,6 +30,8 @@ class ClientIpWhitelistController
             )]);
         } catch (InvalidArgumentException $exception) {
             return json(['code' => 400, 'message' => $exception->getMessage()])->withStatus(400);
+        } catch (Throwable $exception) {
+            return json(['code' => 500, 'message' => 'IP 白名单保存失败，请确认已导入 sql/003_client_ip_whitelist.sql'])->withStatus(500);
         }
     }
 
@@ -40,6 +47,8 @@ class ClientIpWhitelistController
             )]);
         } catch (InvalidArgumentException $exception) {
             return json(['code' => 400, 'message' => $exception->getMessage()])->withStatus(400);
+        } catch (Throwable $exception) {
+            return json(['code' => 500, 'message' => 'IP 白名单保存失败，请确认已导入 sql/003_client_ip_whitelist.sql'])->withStatus(500);
         }
     }
 
@@ -50,6 +59,8 @@ class ClientIpWhitelistController
             return json(['code' => 0]);
         } catch (InvalidArgumentException $exception) {
             return json(['code' => 400, 'message' => $exception->getMessage()])->withStatus(400);
+        } catch (Throwable $exception) {
+            return json(['code' => 500, 'message' => 'IP 白名单删除失败，请确认已导入 sql/003_client_ip_whitelist.sql'])->withStatus(500);
         }
     }
 }

@@ -559,7 +559,13 @@ async function api(path, opt = {}) {
     opt.body = JSON.stringify(opt.body);
   }
   const response = await fetch(adminApiPath(path), opt);
-  const body = await response.json();
+  const text = await response.text();
+  let body = null;
+  try {
+    body = text ? JSON.parse(text) : null;
+  } catch (error) {
+    throw Error(text || '服务返回了非 JSON 响应');
+  }
   if (!response.ok || body.code !== 0) throw Error(body.message || '请求失败');
   return body.data;
 }
