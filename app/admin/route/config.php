@@ -2,6 +2,7 @@
 
 use app\admin\controller\ConfigController;
 use app\admin\controller\ClientAccountController;
+use app\admin\controller\ClientGuideController;
 use app\admin\controller\AuthController;
 use app\admin\middleware\AdminAuthMiddleware;
 use Webman\Route;
@@ -29,4 +30,5 @@ Route::group($adminPrefix . '/api/admin/v1', function () {
     Route::post('/clientAccount', [ClientAccountController::class, 'create']);
     Route::post('/clientAccount/update', [ClientAccountController::class, 'update']);
     Route::post('/clientAccount/disable', [ClientAccountController::class, 'disable']);
+    Route::get('/clientGuide', [ClientGuideController::class, 'index']);
 })->middleware(AdminAuthMiddleware::class);

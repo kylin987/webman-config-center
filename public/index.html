@@ -83,6 +83,21 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .profile-card h2{font-size:15px;margin:0 0 14px;color:#111827}
 .profile-card p{margin:7px 0;color:var(--muted);line-height:1.65}
 .profile-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.guide-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.guide-card{padding:18px}
+.guide-card.wide{grid-column:1/-1}
+.guide-card h2{font-size:15px;margin:0 0 8px;color:#111827}
+.guide-card p{margin:6px 0 14px;color:var(--muted);line-height:1.65}
+.guide-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}
+.guide-meta div{padding:11px;border:1px solid #e6efff;border-radius:9px;background:#f8fbff}
+.guide-meta span{display:block;color:var(--muted);font-size:12px;margin-bottom:4px}
+.guide-meta b{display:block;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.code-box{position:relative;margin-top:10px;border:1px solid #dbeafe;border-radius:10px;background:#0f172a;overflow:hidden;box-shadow:0 12px 28px rgba(15,23,42,.12)}
+.code-box pre{margin:0;padding:16px 18px;color:#dbeafe;line-height:1.65;overflow:auto;font-family:"SFMono-Regular",Consolas,monospace;font-size:12px}
+.code-box .copy{position:absolute;right:10px;top:10px;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.16);color:#e5efff;box-shadow:none}
+.code-box .copy:hover{background:rgba(255,255,255,.16);color:#fff}
+.account-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.account-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid #bae0ff;border-radius:999px;background:#f0f7ff;color:#0958d9;font-size:12px}
 .mfa-bind-box{display:grid;grid-template-columns:180px 1fr;gap:16px;align-items:start;margin:14px 0}
 .mfa-qr{width:180px;min-height:180px;padding:12px;border:1px solid #d6e4ff;border-radius:12px;background:#fff;display:grid;place-items:center;box-shadow:0 8px 20px rgba(22,119,255,.08)}
 .mfa-qr svg{width:156px;height:156px;display:block}
@@ -125,7 +140,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .editor-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:#fbfdff;border-top:1px solid var(--line)}
 .modal-status{color:var(--muted)}
 .editor-actions{display:flex;gap:8px}
-@media(max-width:900px){.shell{grid-template-columns:1fr}.nav{position:sticky;top:0;z-index:2}.content{padding:16px}.editor-fields{grid-template-columns:1fr}.page-head{align-items:flex-start;flex-direction:column}.modal{padding:10px}.modal-card{width:100%;height:calc(100vh - 20px)}.account-modal-card{height:auto}.file-name strong{font-size:16px}}
+@media(max-width:900px){.shell{grid-template-columns:1fr}.nav{position:sticky;top:0;z-index:2}.content{padding:16px}.editor-fields{grid-template-columns:1fr}.page-head{align-items:flex-start;flex-direction:column}.guide-grid{grid-template-columns:1fr}.guide-meta{grid-template-columns:1fr 1fr}.modal{padding:10px}.modal-card{width:100%;height:calc(100vh - 20px)}.account-modal-card{height:auto}.file-name strong{font-size:16px}}
 @media(max-width:900px){.profile-grid{grid-template-columns:1fr}.mfa-bind-box{grid-template-columns:1fr}.mfa-qr{width:180px}}
 </style>
 </head>
@@ -161,6 +176,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
       <div class="menu">
         <button id="navConfig" class="active">配置管理</button>
         <button id="navAccount">客户端账号</button>
+        <button id="navGuide">接入说明</button>
       </div>
       <div class="nav-foot">
         <button class="profile-entry" id="profileEntry">
@@ -198,6 +214,40 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
           <div id="accountEmpty" class="empty hidden">暂无客户端账号</div>
         </div>
         <div class="status" id="accountStatus"></div>
+      </section>
+      <section id="guidePage" class="hidden">
+        <div class="page-head">
+          <div><h1>接入说明</h1><p>把下面示例复制到业务项目，密码字段自行填写，不在后台展示。</p></div>
+          <div class="toolbar"><button class="secondary" id="refreshGuide">刷新</button></div>
+        </div>
+        <div class="guide-grid">
+          <div class="panel guide-card wide">
+            <h2>当前系统地址</h2>
+            <p>客户端使用这个地址读取配置。后台路径不会写入 endpoint，客户端接口固定走系统根地址下的 <span class="mono">/api/client/v1/config</span>。</p>
+            <div class="guide-meta">
+              <div><span>Endpoint</span><b id="guideEndpoint">-</b></div>
+              <div><span>Namespace</span><b id="guideNamespace">-</b></div>
+              <div><span>事件频道</span><b id="guideEventChannel">-</b></div>
+              <div><span>Redis DB</span><b id="guideRedisDb">-</b></div>
+            </div>
+          </div>
+          <div class="panel guide-card">
+            <h2>.env 示例</h2>
+            <p>建议只把服务端地址、客户端账号密码、Redis 密码等环境相关或敏感信息放到 .env。</p>
+            <div class="code-box"><button class="copy small" data-copy-target="guideEnvCode">复制</button><pre id="guideEnvCode"></pre></div>
+          </div>
+          <div class="panel guide-card">
+            <h2>客户端 config.php 示例</h2>
+            <p>普通配置直接写配置文件。Redis 密码不展示，示例里从 env 读取。</p>
+            <div class="code-box"><button class="copy small" data-copy-target="guideConfigCode">复制</button><pre id="guideConfigCode"></pre></div>
+          </div>
+          <div class="panel guide-card wide">
+            <h2>可用客户端账号</h2>
+            <p>这里只展示已启用账号的用户名。密码不会保存明文，也不会在后台展示。</p>
+            <div class="account-chips" id="guideAccountChips"></div>
+          </div>
+        </div>
+        <div class="status" id="guideStatus"></div>
       </section>
       <section id="profilePage" class="hidden">
         <div class="page-head">
@@ -377,6 +427,7 @@ let historyCache = new Map();
 let historyContext = null;
 let detailHistoryId = null;
 let accountCache = new Map();
+let guideCache = null;
 let editingAccountId = null;
 let toastTimer = null;
 let confirmResolver = null;
@@ -479,12 +530,15 @@ function showApp(username = '') {
 function showPage(page) {
   const isConfig = page === 'config';
   const isAccount = page === 'account';
+  const isGuide = page === 'guide';
   const isProfile = page === 'profile';
   $('configPage').classList.toggle('hidden', !isConfig);
   $('accountPage').classList.toggle('hidden', !isAccount);
+  $('guidePage').classList.toggle('hidden', !isGuide);
   $('profilePage').classList.toggle('hidden', !isProfile);
   $('navConfig').classList.toggle('active', isConfig);
   $('navAccount').classList.toggle('active', isAccount);
+  $('navGuide').classList.toggle('active', isGuide);
 }
 
 function setStatus(text, error = false) {
@@ -515,6 +569,11 @@ function setAccountStatus(text, error = false) {
 function setAccountModalStatus(text, error = false) {
   $('accountModalStatus').textContent = text;
   $('accountModalStatus').className = 'modal-status ' + (error ? 'error' : '');
+}
+
+function setGuideStatus(text, error = false) {
+  $('guideStatus').textContent = text;
+  $('guideStatus').className = 'status ' + (error ? 'error' : '');
 }
 
 function setImportModalStatus(text, error = false) {
@@ -969,6 +1028,81 @@ async function disableAccount(id) {
   }
 }
 
+function currentClientEndpoint(guide) {
+  const adminPath = String(guide?.adminPath || adminBasePath || '').replace(/\/+$/, '');
+  const pathname = location.pathname.replace(/\/+$/, '');
+  let basePath = pathname;
+  if (adminPath && pathname.endsWith(adminPath)) {
+    basePath = pathname.slice(0, -adminPath.length);
+  }
+  basePath = basePath.replace(/\/+$/, '');
+  return location.origin + (basePath ? basePath + '/' : '/');
+}
+
+function firstGuideUsername(guide) {
+  const account = (guide?.accounts || [])[0];
+  return account?.username || 'your-client-username';
+}
+
+function phpSingleQuote(value) {
+  return String(value ?? '').replaceAll('\\\\', '\\\\\\\\').replaceAll("'", "\\'");
+}
+
+function renderGuide(guide) {
+  const endpoint = currentClientEndpoint(guide);
+  const username = firstGuideUsername(guide);
+  const redis = guide.redis || {};
+  const namespace = guide.namespace || 'public';
+  const channel = guide.eventChannel || 'config-center:changed';
+  $('guideEndpoint').textContent = endpoint;
+  $('guideNamespace').textContent = namespace;
+  $('guideEventChannel').textContent = channel;
+  $('guideRedisDb').textContent = redis.database ?? 0;
+  $('guideEnvCode').textContent = [
+    'CONFIG_CENTER_ENDPOINT=' + endpoint,
+    'CONFIG_CENTER_USERNAME=' + username,
+    'CONFIG_CENTER_PASSWORD=your-client-password',
+    'CONFIG_CENTER_REDIS_PASSWORD=your-redis-password',
+  ].join('\n');
+  $('guideConfigCode').textContent = [
+    "'namespace' => '" + phpSingleQuote(namespace) + "',",
+    "'redis' => [",
+    "    'enable' => true,",
+    "    'host' => '" + phpSingleQuote(redis.host || '127.0.0.1') + "',",
+    "    'port' => " + Number(redis.port || 6379) + ',',
+    "    'password' => getenv('CONFIG_CENTER_REDIS_PASSWORD') ?: '',",
+    "    'database' => " + Number(redis.database || 0) + ',',
+    "],",
+    "'event_channel' => '" + phpSingleQuote(channel) + "',",
+  ].join('\n');
+  const accounts = guide.accounts || [];
+  $('guideAccountChips').innerHTML = accounts.length
+    ? accounts.map(account => `<span class=\"account-chip\"><b>${escapeHtml(account.username)}</b>${account.name ? `<span>${escapeHtml(account.name)}</span>` : ''}</span>`).join('')
+    : '<span class=\"empty\">暂无已启用客户端账号，请先在“客户端账号”中创建。</span>';
+}
+
+async function loadGuide() {
+  guideCache = await api('/api/admin/v1/clientGuide');
+  renderGuide(guideCache);
+  setGuideStatus('');
+}
+
+async function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  document.execCommand('copy');
+  textarea.remove();
+}
+
 async function loadProfile() {
   profileCache = await api('/api/admin/v1/profile');
   $('profileUsername').textContent = profileCache.username || '-';
@@ -1158,9 +1292,11 @@ $('loginForm').onsubmit = async event => {
 
 $('navConfig').onclick = () => {showPage('config'); loadConfigs().catch(error => setStatus(error.message, true));};
 $('navAccount').onclick = () => {showPage('account'); loadAccounts().catch(error => setAccountStatus(error.message, true));};
+$('navGuide').onclick = () => {showPage('guide'); loadGuide().catch(error => setGuideStatus(error.message, true));};
 $('profileEntry').onclick = () => {showPage('profile'); loadProfile().catch(error => setProfileStatus(error.message, true));};
 $('refreshConfig').onclick = () => loadConfigs().catch(error => setStatus(error.message, true));
 $('refreshAccount').onclick = () => loadAccounts().catch(error => setAccountStatus(error.message, true));
+$('refreshGuide').onclick = () => loadGuide().catch(error => setGuideStatus(error.message, true));
 $('refreshProfile').onclick = () => loadProfile().catch(error => setProfileStatus(error.message, true));
 $('newConfig').onclick = newConfig;
 $('exportConfig').onclick = exportConfigZip;
@@ -1188,6 +1324,17 @@ $('cancelAccount').onclick = closeAccountModal;
 $('confirmClose').onclick = () => closeConfirmModal(false);
 $('confirmCancel').onclick = () => closeConfirmModal(false);
 $('confirmOk').onclick = () => closeConfirmModal(true);
+document.querySelectorAll('[data-copy-target]').forEach(button => {
+  button.onclick = async () => {
+    const target = $(button.dataset.copyTarget);
+    try {
+      await copyText(target?.textContent || '');
+      showToast('已复制到剪贴板');
+    } catch (error) {
+      showToast('复制失败，请手动复制', true);
+    }
+  };
+});
 $('resetLogin').onclick = resetLoginMfa;
 $('format').onchange = setEditorMode;
 $('dataId').oninput = () => {$('modalFileName').textContent = $('dataId').value || 'new.php';};
