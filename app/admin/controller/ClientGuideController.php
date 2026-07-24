@@ -21,6 +21,7 @@ class ClientGuideController
             'namespace' => (string) config('config-center.default_namespace', 'public'),
             'adminPath' => (string) config('config-center.admin_path', '/cc-admin'),
             'eventChannel' => (string) config('config-center.event_channel', 'config-center:changed'),
+            'clientIpWhitelistEnabled' => (bool) config('config-center.client_ip_whitelist_enable', true),
             'redis' => [
                 'host' => (string) ($redis['host'] ?? ''),
                 'port' => (int) ($redis['port'] ?? 6379),

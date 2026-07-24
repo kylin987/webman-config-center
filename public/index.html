@@ -88,7 +88,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .guide-card.wide{grid-column:1/-1}
 .guide-card h2{font-size:15px;margin:0 0 8px;color:#111827}
 .guide-card p{margin:6px 0 14px;color:var(--muted);line-height:1.65}
-.guide-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}
+.guide-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:12px}
 .guide-meta div{padding:11px;border:1px solid #e6efff;border-radius:9px;background:#f8fbff}
 .guide-meta span{display:block;color:var(--muted);font-size:12px;margin-bottom:4px}
 .guide-meta b{display:block;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -221,6 +221,11 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
           <div><h1>IP 白名单</h1><p>只限制客户端配置读取接口。系统内置内网网段默认放行，外网项目访问时在这里手动添加公网 IP。</p></div>
           <div class="toolbar"><button class="secondary" id="refreshIpWhitelist">刷新</button><button id="newIpWhitelist">新增外网 IP</button></div>
         </div>
+        <div class="panel profile-card">
+          <h2>当前状态</h2>
+          <p>白名单开关：<span id="ipWhitelistEnabledTag" class="tag">开启</span></p>
+          <p class="mono">关闭时客户端读取接口不校验 IP，只校验客户端账号密码。可通过环境变量 CONFIG_CENTER_CLIENT_IP_WHITELIST_ENABLE 控制。</p>
+        </div>
         <div class="panel">
           <div class="panel-head"><h2>系统内置白名单</h2><span class="mono">不可删除</span></div>
           <table class="table">
@@ -251,6 +256,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
               <div><span>Endpoint</span><b id="guideEndpoint">-</b></div>
               <div><span>Namespace</span><b id="guideNamespace">-</b></div>
               <div><span>事件频道</span><b id="guideEventChannel">-</b></div>
+              <div><span>IP 白名单</span><b id="guideIpWhitelist">-</b></div>
               <div><span>Redis DB</span><b id="guideRedisDb">-</b></div>
             </div>
           </div>
@@ -1086,6 +1092,8 @@ async function disableAccount(id) {
 
 async function loadIpWhitelist() {
   const data = await api('/api/admin/v1/clientIpWhitelist');
+  $('ipWhitelistEnabledTag').textContent = data.enabled ? '已开启' : '已关闭';
+  $('ipWhitelistEnabledTag').className = 'tag ' + (data.enabled ? '' : 'off');
   const builtin = data.builtin || [];
   const manual = data.manual || [];
   ipWhitelistCache = new Map(manual.map(row => [String(row.id), row]));
@@ -1201,6 +1209,7 @@ function renderGuide(guide) {
   $('guideEndpoint').textContent = endpoint;
   $('guideNamespace').textContent = namespace;
   $('guideEventChannel').textContent = channel;
+  $('guideIpWhitelist').textContent = guide.clientIpWhitelistEnabled ? '已开启' : '已关闭';
   $('guideRedisDb').textContent = redis.database ?? 0;
   $('guideEnvCode').textContent = [
     'CONFIG_CENTER_ENDPOINT=' + endpoint,

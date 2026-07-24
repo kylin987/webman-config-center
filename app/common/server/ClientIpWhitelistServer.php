@@ -25,6 +25,7 @@ class ClientIpWhitelistServer
         $manual = ClientIpWhitelist::query()->orderByDesc('id')->get();
 
         return [
+            'enabled' => $this->enabled(),
             'builtin' => array_map(fn (array $rule) => [
                 'name' => $rule['name'],
                 'cidr' => $rule['cidr'],
@@ -96,6 +97,10 @@ class ClientIpWhitelistServer
     public function assertAllowed(Request $request): string
     {
         $ip = $this->clientIp($request);
+        if (!$this->enabled()) {
+            return $ip;
+        }
+
         if ($ip === '') {
             throw new InvalidArgumentException('无法识别客户端 IP');
         }
@@ -134,6 +139,10 @@ class ClientIpWhitelistServer
 
     public function isAllowed(string $ip): bool
     {
+        if (!$this->enabled()) {
+            return true;
+        }
+
         foreach (self::BUILTIN_RULES as $rule) {
             if ($this->ipInCidr($ip, $rule['cidr'])) {
                 return true;
@@ -148,6 +157,11 @@ class ClientIpWhitelistServer
         }
 
         return false;
+    }
+
+    public function enabled(): bool
+    {
+        return (bool) config('config-center.client_ip_whitelist_enable', true);
     }
 
     private function normalizeCidr(string $cidr): string

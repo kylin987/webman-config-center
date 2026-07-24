@@ -58,6 +58,7 @@ REDIS_PASSWORD=
 CONFIG_CENTER_BOOTSTRAP_USERNAME=admin
 CONFIG_CENTER_BOOTSTRAP_PASSWORD=replace-with-a-random-secret
 CONFIG_CENTER_ADMIN_PATH=/cc-admin
+CONFIG_CENTER_CLIENT_IP_WHITELIST_ENABLE=1
 APP_DEBUG=0
 WEBMAN_HTTP_WORKERS=2
 ```
@@ -162,6 +163,14 @@ fe80::/10
 ```
 
 ACK 内部、ECS 内网通常无需额外配置；外网业务项目需要在后台“IP 白名单”菜单手动添加公网 IP 或 CIDR。白名单不限制管理后台，避免误配置导致管理员无法登录。
+
+如需临时关闭客户端 IP 白名单，可在 `.env` 中设置：
+
+```dotenv
+CONFIG_CENTER_CLIENT_IP_WHITELIST_ENABLE=0
+```
+
+关闭后客户端读取 API 不再校验 IP，只校验客户端账号密码。
 
 业务项目推荐使用独立客户端 Composer 包：
 
