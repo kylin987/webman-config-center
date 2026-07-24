@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Config Center</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <style>
 :root{--ink:#1f2937;--muted:#6b7280;--line:#e5e7eb;--paper:#f5f7fb;--panel:#fff;--accent:#1677ff;--accent-hover:#0958d9;--accent-soft:#e6f4ff;--danger:#d92d20;--danger-soft:#fff1f0;--nav:#fff;--editor:#111827;--editor-head:#1f2937;--shadow:0 8px 24px rgba(15,23,42,.06)}
 *{box-sizing:border-box}
@@ -25,6 +26,8 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 #login{min-height:100vh;display:grid;place-items:center}
 .login-card{width:min(390px,calc(100vw - 32px));padding:30px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);position:relative;overflow:hidden}
 .login-card:before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,var(--accent),#69b1ff)}
+.brand-row{display:flex;align-items:center;gap:10px}
+.app-icon{width:32px;height:32px;border-radius:9px;box-shadow:0 8px 18px rgba(22,119,255,.22)}
 .brand{font-weight:700;font-size:24px;letter-spacing:.2px;color:#0f172a}
 .login-card p{color:var(--muted);margin:6px 0 24px}
 .field{display:grid;gap:7px;margin:12px 0}
@@ -40,6 +43,8 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
 .nav{background:var(--nav);color:var(--ink);padding:22px 14px;display:flex;flex-direction:column;gap:18px;border-right:1px solid var(--line);box-shadow:4px 0 18px rgba(15,23,42,.03)}
 .nav .brand{color:#0f172a;font-size:21px;padding:0 8px}
+.nav .brand-row{padding:0 8px}
+.nav .brand-row .brand{padding:0}
 .nav small{display:block;color:var(--muted);padding:3px 8px 0}
 .menu{display:grid;gap:6px}
 .menu button{width:100%;text-align:left;background:transparent;color:#4b5563;border-radius:8px;box-shadow:none;border:1px solid transparent;padding:10px 12px;position:relative}
@@ -128,7 +133,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 <div id="toast" class="toast"></div>
 <section id="login">
   <form class="login-card" id="loginForm">
-    <div class="brand">Config Center</div>
+    <div class="brand-row"><img class="app-icon" src="/favicon.svg" alt=""><div class="brand">Config Center</div></div>
     <p>轻量配置管理</p>
     <div class="field"><label>用户名</label><input name="username" value="admin" autocomplete="username" required></div>
     <div class="field"><label>密码</label><input name="password" type="password" autocomplete="current-password" required></div>
@@ -152,7 +157,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 <section id="app">
   <div class="shell">
     <aside class="nav">
-      <div><div class="brand">Config Center</div><small id="who">已登录</small></div>
+      <div><div class="brand-row"><img class="app-icon" src="/favicon.svg" alt=""><div class="brand">Config Center</div></div><small id="who">已登录</small></div>
       <div class="menu">
         <button id="navConfig" class="active">配置管理</button>
         <button id="navAccount">客户端账号</button>
