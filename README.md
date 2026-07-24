@@ -59,6 +59,7 @@ CONFIG_CENTER_BOOTSTRAP_USERNAME=admin
 CONFIG_CENTER_BOOTSTRAP_PASSWORD=replace-with-a-random-secret
 CONFIG_CENTER_ADMIN_PATH=/cc-admin
 CONFIG_CENTER_CLIENT_IP_WHITELIST_ENABLE=1
+CONFIG_CENTER_CLIENT_IP_WHITELIST_LOG_CHANNEL=default
 APP_DEBUG=0
 WEBMAN_HTTP_WORKERS=2
 ```
@@ -173,6 +174,12 @@ CONFIG_CENTER_CLIENT_IP_WHITELIST_ENABLE=0
 ```
 
 关闭后客户端读取 API 不再校验 IP，只校验客户端账号密码。
+
+客户端 IP 被白名单拦截时会写 warning 日志，日志 channel 默认是 `default`。如果线上日志 channel 使用 `star`，可设置：
+
+```dotenv
+CONFIG_CENTER_CLIENT_IP_WHITELIST_LOG_CHANNEL=star
+```
 
 业务项目推荐使用独立客户端 Composer 包：
 

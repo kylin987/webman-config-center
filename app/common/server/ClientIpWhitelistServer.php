@@ -5,7 +5,9 @@ namespace app\common\server;
 use app\common\library\DateTimeFormatter;
 use app\common\model\ClientIpWhitelist;
 use InvalidArgumentException;
+use support\Log;
 use support\Request;
+use Throwable;
 
 class ClientIpWhitelistServer
 {
@@ -102,6 +104,7 @@ class ClientIpWhitelistServer
         }
 
         if ($ip === '') {
+            $this->logBlocked($request, 'empty_ip', $ip);
             throw new InvalidArgumentException('无法识别客户端 IP');
         }
 
@@ -109,6 +112,7 @@ class ClientIpWhitelistServer
             return $ip;
         }
 
+        $this->logBlocked($request, 'not_in_whitelist', $ip);
         throw new InvalidArgumentException('客户端 IP 不在白名单内：' . $ip);
     }
 
@@ -230,6 +234,44 @@ class ClientIpWhitelistServer
     private function validIp(string $ip): bool
     {
         return filter_var($ip, FILTER_VALIDATE_IP) !== false;
+    }
+
+    private function logBlocked(Request $request, string $reason, string $ip): void
+    {
+        $context = [
+            'reason' => $reason,
+            'ip' => $ip,
+            'method' => $request->method(),
+            'path' => $request->path(),
+            'namespace' => (string) ($request->get('namespace') ?: config('config-center.default_namespace', 'public')),
+            'group' => (string) $request->get('group', ''),
+            'dataId' => (string) $request->get('dataId', ''),
+            'headers' => [
+                'ali-cdn-real-ip' => (string) $request->header('ali-cdn-real-ip', ''),
+                'x-forwarded-for' => (string) $request->header('x-forwarded-for', ''),
+                'x-real-ip' => (string) $request->header('x-real-ip', ''),
+            ],
+        ];
+
+        foreach (['getRealIp', 'getRemoteIp'] as $method) {
+            if (method_exists($request, $method)) {
+                $context[$method] = (string) $request->{$method}();
+            }
+        }
+
+        try {
+            $channel = (string) config('config-center.client_ip_whitelist_log_channel', 'default');
+            if ($channel !== '') {
+                Log::channel($channel)->warning('config center client ip blocked', $context);
+                return;
+            }
+            Log::warning('config center client ip blocked', $context);
+        } catch (Throwable) {
+            try {
+                Log::warning('config center client ip blocked', $context);
+            } catch (Throwable) {
+            }
+        }
     }
 
     private function formatTime(mixed $value): ?string
