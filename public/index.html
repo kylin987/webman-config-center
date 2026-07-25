@@ -229,7 +229,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
         <div class="panel">
           <div class="config-filter">
             <div class="field"><label>关键词模糊搜索</label><input id="configKeyword" placeholder="输入 Data ID 或 Group，自动搜索"></div>
-            <div class="field"><label>Group 检索</label><input id="configGroupFilter" list="configGroupOptions" placeholder="选择或输入 Group，自动搜索"><datalist id="configGroupOptions"></datalist></div>
+            <div class="field"><label>Group 检索</label><select id="configGroupFilter"><option value="">全部 Group</option></select></div>
             <div class="filter-actions"><button class="secondary" id="resetConfigFilter">重置</button></div>
           </div>
           <table class="table">
@@ -740,7 +740,11 @@ function configQueryString() {
 
 async function loadConfigGroups() {
   const groups = await api('/api/admin/v1/config/groups');
-  $('configGroupOptions').innerHTML = (groups || []).map(group => `<option value="${escapeHtml(group)}"></option>`).join('');
+  const currentGroup = $('configGroupFilter').value;
+  $('configGroupFilter').innerHTML = '<option value="">全部 Group</option>' + (groups || []).map(group => `<option value="${escapeHtml(group)}">${escapeHtml(group)}</option>`).join('');
+  if ([...$('configGroupFilter').options].some(option => option.value === currentGroup)) {
+    $('configGroupFilter').value = currentGroup;
+  }
 }
 
 function scheduleConfigSearch(delay = 300) {
@@ -1632,7 +1636,7 @@ $('configNextPage').onclick = () => {
   loadConfigs().catch(error => setStatus(error.message, true));
 };
 $('configKeyword').addEventListener('input', () => scheduleConfigSearch());
-$('configGroupFilter').addEventListener('input', () => scheduleConfigSearch());
+$('configGroupFilter').addEventListener('change', () => scheduleConfigSearch(0));
 $('refreshAccount').onclick = () => loadAccounts().catch(error => setAccountStatus(error.message, true));
 $('refreshIpWhitelist').onclick = () => loadIpWhitelist().catch(error => setIpWhitelistStatus(error.message, true));
 $('refreshGuide').onclick = () => loadGuide().catch(error => setGuideStatus(error.message, true));
