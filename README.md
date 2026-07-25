@@ -140,7 +140,7 @@ docker run -d --name webman-config-center \
   webman-config-center:latest
 ```
 
-## 客户端读取 API
+## 客户端 API
 
 客户端通过 Basic Auth 读取配置：
 
@@ -150,7 +150,34 @@ GET /api/client/v1/config?namespace=public&group=DEFAULT_GROUP&dataId=app.php
 
 客户端账号在管理后台的“客户端账号”菜单中创建。
 
-客户端读取 API 会校验 IP 白名单。系统内置放行本机和常见内网网段：
+客户端也可以通过同一套账号密码发布配置，适合业务项目需要主动新增或修改配置的场景：
+
+```bash
+curl -u 'client_username:client_password' \
+  -H 'Content-Type: application/json' \
+  -X POST 'https://config-center.example.com/api/client/v1/config/publish' \
+  -d '{
+    "namespace": "public",
+    "group": "DEFAULT_GROUP",
+    "dataId": "app.php",
+    "format": "php",
+    "content": "<?php\nreturn [\"debug\" => false];\n",
+    "expectedRevision": null,
+    "note": "publish from client"
+  }'
+```
+
+字段说明：
+
+- `namespace`：命名空间，留空时使用服务端默认命名空间。
+- `group`：配置分组。
+- `dataId`：配置文件名或配置标识。
+- `format`：配置格式，支持 `php`、`json`、`yaml`、`yml`、`ini`、`txt`。
+- `content`：完整配置内容。
+- `expectedRevision`：可选。传入当前版本号时，服务端会做乐观锁校验，避免覆盖别人刚发布的版本。
+- `note`：可选。写入历史版本备注。
+
+客户端 API 会校验 IP 白名单。系统内置放行本机和常见内网网段：
 
 ```text
 127.0.0.1/32
@@ -173,7 +200,7 @@ ACK 内部、ECS 内网通常无需额外配置；外网业务项目需要在后
 CONFIG_CENTER_CLIENT_IP_WHITELIST_ENABLE=0
 ```
 
-关闭后客户端读取 API 不再校验 IP，只校验客户端账号密码。
+关闭后客户端 API 不再校验 IP，只校验客户端账号密码。
 
 客户端 IP 被白名单拦截时会写 warning 日志，日志 channel 默认是 `default`。如果线上日志 channel 使用 `star`，可设置：
 

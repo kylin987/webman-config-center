@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Config Center</title>
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.png" type="image/png">
 <style>
 :root{--ink:#1f2937;--muted:#6b7280;--line:#e5e7eb;--paper:#f5f7fb;--panel:#fff;--accent:#1677ff;--accent-hover:#0958d9;--accent-soft:#e6f4ff;--danger:#d92d20;--danger-soft:#fff1f0;--nav:#fff;--editor:#111827;--editor-head:#1f2937;--shadow:0 8px 24px rgba(15,23,42,.06)}
 *{box-sizing:border-box}
@@ -30,7 +30,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .login-card:after{content:"";position:absolute;right:-52px;top:-56px;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,rgba(25,211,255,.25),transparent 68%);pointer-events:none}
 .login-brand{display:grid;place-items:center;text-align:center;margin-bottom:20px;position:relative;z-index:1}
 .login-brand .brand{margin-top:10px}
-.brand-orb{width:82px;height:82px;border-radius:26px;box-shadow:0 18px 44px rgba(22,119,255,.26),0 0 0 8px rgba(255,255,255,.72)}
+.brand-orb{width:118px;height:auto;border-radius:0;box-shadow:none}
 .brand-row{display:flex;align-items:center;gap:10px}
 .app-icon{width:32px;height:32px;border-radius:10px;box-shadow:0 8px 18px rgba(22,119,255,.22)}
 .brand{font-weight:700;font-size:24px;letter-spacing:.2px;color:#0f172a}
@@ -41,7 +41,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .mfa-code-field input{height:58px;text-align:center;font-size:28px;font-weight:750;letter-spacing:10px;font-family:"SFMono-Regular",Consolas,monospace;color:#0f172a}
 .mfa-code-field input::placeholder{font-size:14px;letter-spacing:0;font-weight:400;color:#94a3b8}
 .mfa-hero{display:grid;justify-items:center;text-align:center;gap:8px;margin-bottom:16px}
-.mfa-hero img{width:70px;height:70px;border-radius:24px;box-shadow:0 16px 36px rgba(22,119,255,.2)}
+.mfa-hero img{width:110px;height:auto;border-radius:0;box-shadow:none}
 .mfa-hero h2{margin:4px 0 0;font-size:22px;color:#0f172a}
 .mfa-hero p{margin:0;color:var(--muted)}
 @keyframes mfaIn{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
@@ -68,7 +68,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .profile-entry{width:100%;display:grid;grid-template-columns:32px 1fr;gap:10px;align-items:center;text-align:left;background:#fbfdff;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px;box-shadow:none}
 .profile-entry:hover{background:#f8fbff;border-color:#bae0ff;color:var(--accent);box-shadow:0 8px 20px rgba(22,119,255,.08)}
 .profile-avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-weight:700;overflow:hidden}
-.profile-avatar img{width:100%;height:100%;display:block}
+.profile-avatar img{width:100%;height:100%;display:block;object-fit:contain}
 .profile-entry strong{display:block;font-size:13px;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .profile-entry span{display:block;margin-top:2px;color:var(--muted);font-size:12px}
 .content{padding:28px;min-width:0}
@@ -164,7 +164,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
   <div class="login-shell">
     <form class="login-card" id="loginForm">
       <div class="login-brand">
-        <img class="brand-orb" src="/logo-avatar.svg" alt="">
+        <img class="brand-orb" src="/logo-avatar.png" alt="">
         <div class="brand">Config Center</div>
         <p>轻量配置管理，让配置落地到项目本地。</p>
       </div>
@@ -177,7 +177,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
     </form>
     <form class="login-card mfa-card hidden" id="mfaForm">
       <div class="mfa-hero">
-        <img src="/logo-avatar.svg" alt="">
+        <img src="/logo-avatar.png" alt="">
         <h2 id="mfaTitle">二次验证</h2>
         <p id="mfaHelp">账号密码已通过，请输入验证器中的 6 位动态验证码。</p>
       </div>
@@ -198,7 +198,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 <section id="app">
   <div class="shell">
     <aside class="nav">
-      <div><div class="brand-row"><img class="app-icon" src="/favicon.svg" alt=""><div class="brand">Config Center</div></div><small id="who">已登录</small></div>
+      <div><div class="brand-row"><img class="app-icon" src="/favicon.png" alt=""><div class="brand">Config Center</div></div><small id="who">已登录</small></div>
       <div class="menu">
         <button id="navConfig" class="active">配置管理</button>
         <button id="navAccount">客户端账号</button>
@@ -207,7 +207,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
       </div>
       <div class="nav-foot">
         <button class="profile-entry" id="profileEntry">
-          <span class="profile-avatar" id="profileAvatar"><img src="/logo-avatar.svg" alt=""></span>
+          <span class="profile-avatar" id="profileAvatar"><img src="/logo-avatar.png" alt=""></span>
           <span><strong id="profileEntryName">admin</strong><span>个人中心</span></span>
         </button>
         <span>Webman lightweight config service</span>

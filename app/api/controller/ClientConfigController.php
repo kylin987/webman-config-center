@@ -4,6 +4,7 @@ namespace app\api\controller;
 
 use app\common\server\ClientConfigServer;
 use app\common\server\ClientIpWhitelistServer;
+use app\common\server\ConfigPublishServer;
 use InvalidArgumentException;
 use support\Request;
 use support\Response;
@@ -28,6 +29,32 @@ class ClientConfigController
             $message = $exception->getMessage();
             $status = str_contains($message, '缺少客户端账号') || str_contains($message, '客户端账号或密码错误') ? 401 : (str_contains($message, '不存在') ? 404 : 403);
             return json(['code' => $status, 'message' => $exception->getMessage()])->withStatus($status)->withHeader('Cache-Control', 'no-store');
+        }
+    }
+
+    public function publish(Request $request): Response
+    {
+        try {
+            (new ClientIpWhitelistServer())->assertAllowed($request);
+            [$username, $password] = $this->clientCredentials($request);
+            $account = (new ClientConfigServer())->authenticate($username, $password);
+
+            $item = (new ConfigPublishServer())->publish($request->post(), 'client:' . $account->username);
+            return json(['code' => 0, 'data' => [
+                'namespace' => $item->namespace,
+                'group' => $item->config_group,
+                'dataId' => $item->data_id,
+                'format' => $item->format,
+                'revision' => (int) $item->revision,
+                'md5' => $item->content_md5,
+            ]])->withHeader('Cache-Control', 'no-store');
+        } catch (InvalidArgumentException $exception) {
+            $message = $exception->getMessage();
+            $status = str_contains($message, '缺少客户端账号') || str_contains($message, '客户端账号或密码错误') ? 401 : 400;
+            if (str_contains($message, '客户端 IP 不在白名单')) {
+                $status = 403;
+            }
+            return json(['code' => $status, 'message' => $message])->withStatus($status)->withHeader('Cache-Control', 'no-store');
         }
     }
 

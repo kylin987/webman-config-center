@@ -13,7 +13,7 @@ class ConfigPublishServer
 {
     public function publish(array $params, string $operator): ConfigItem
     {
-        $namespace = $params['namespace'] ?: config('config-center.default_namespace');
+        $namespace = trim((string) ($params['namespace'] ?? '')) ?: config('config-center.default_namespace');
         $group = trim((string) ($params['group'] ?? ''));
         $dataId = trim((string) ($params['dataId'] ?? ''));
         $format = strtolower(trim((string) ($params['format'] ?? '')));
@@ -76,7 +76,7 @@ class ConfigPublishServer
 
     public function delete(array $params, string $operator): void
     {
-        $namespace = $params['namespace'] ?: config('config-center.default_namespace');
+        $namespace = trim((string) ($params['namespace'] ?? '')) ?: config('config-center.default_namespace');
         $group = trim((string) ($params['group'] ?? ''));
         $dataId = trim((string) ($params['dataId'] ?? ''));
         $expectedRevision = $params['expectedRevision'] ?? null;
