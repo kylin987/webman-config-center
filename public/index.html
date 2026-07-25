@@ -23,15 +23,28 @@ button.icon:hover{background:rgba(255,255,255,.08);color:#fff}
 button:disabled{opacity:.55;cursor:not-allowed}
 input,select{width:100%;border:1px solid #d9dee8;background:#fff;padding:9px 11px;border-radius:6px;outline:none;transition:border-color .15s ease,box-shadow .15s ease}
 input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,255,.12)}
-#login{min-height:100vh;display:grid;place-items:center}
-.login-card{width:min(390px,calc(100vw - 32px));padding:30px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);position:relative;overflow:hidden}
-.login-card:before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,var(--accent),#69b1ff)}
+#login{min-height:100vh;display:grid;place-items:center;padding:28px;background:radial-gradient(circle at 20% 16%,rgba(33,212,253,.18),transparent 32%),radial-gradient(circle at 82% 12%,rgba(71,99,255,.18),transparent 34%),linear-gradient(180deg,#f8fbff 0,#f3f7ff 48%,#eef4ff 100%)}
+.login-shell{width:min(430px,calc(100vw - 32px));display:grid;gap:16px}
+.login-card{padding:30px;background:rgba(255,255,255,.9);border:1px solid rgba(186,224,255,.78);border-radius:18px;box-shadow:0 24px 80px rgba(15,23,42,.13);position:relative;overflow:hidden;backdrop-filter:blur(14px)}
+.login-card:before{content:"";position:absolute;inset:0 0 auto;height:4px;background:linear-gradient(90deg,#19d3ff,#1677ff,#8b5cf6)}
+.login-card:after{content:"";position:absolute;right:-52px;top:-56px;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,rgba(25,211,255,.25),transparent 68%);pointer-events:none}
+.login-brand{display:grid;place-items:center;text-align:center;margin-bottom:20px;position:relative;z-index:1}
+.login-brand .brand{margin-top:10px}
+.brand-orb{width:82px;height:82px;border-radius:26px;box-shadow:0 18px 44px rgba(22,119,255,.26),0 0 0 8px rgba(255,255,255,.72)}
 .brand-row{display:flex;align-items:center;gap:10px}
-.app-icon{width:32px;height:32px;border-radius:9px;box-shadow:0 8px 18px rgba(22,119,255,.22)}
+.app-icon{width:32px;height:32px;border-radius:10px;box-shadow:0 8px 18px rgba(22,119,255,.22)}
 .brand{font-weight:700;font-size:24px;letter-spacing:.2px;color:#0f172a}
-.login-card p{color:var(--muted);margin:6px 0 24px}
+.login-card p{color:var(--muted);margin:6px 0 24px;line-height:1.7}
 .field{display:grid;gap:7px;margin:12px 0}
 .field label{font-size:12px;color:var(--muted)}
+.mfa-card{animation:mfaIn .22s ease both}
+.mfa-code-field input{height:58px;text-align:center;font-size:28px;font-weight:750;letter-spacing:10px;font-family:"SFMono-Regular",Consolas,monospace;color:#0f172a}
+.mfa-code-field input::placeholder{font-size:14px;letter-spacing:0;font-weight:400;color:#94a3b8}
+.mfa-hero{display:grid;justify-items:center;text-align:center;gap:8px;margin-bottom:16px}
+.mfa-hero img{width:70px;height:70px;border-radius:24px;box-shadow:0 16px 36px rgba(22,119,255,.2)}
+.mfa-hero h2{margin:4px 0 0;font-size:22px;color:#0f172a}
+.mfa-hero p{margin:0;color:var(--muted)}
+@keyframes mfaIn{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
 .mfa-panel{margin-top:18px;padding:14px;border:1px solid #d6e4ff;border-radius:10px;background:#f8fbff;display:grid;gap:10px}
 .mfa-panel h3{margin:0;color:#0f172a;font-size:15px}
 .mfa-panel p{margin:0;color:var(--muted);line-height:1.65}
@@ -54,7 +67,8 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .nav-foot{margin-top:auto;padding:0 8px;display:grid;gap:10px;color:#9ca3af;font-size:12px}
 .profile-entry{width:100%;display:grid;grid-template-columns:32px 1fr;gap:10px;align-items:center;text-align:left;background:#fbfdff;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px;box-shadow:none}
 .profile-entry:hover{background:#f8fbff;border-color:#bae0ff;color:var(--accent);box-shadow:0 8px 20px rgba(22,119,255,.08)}
-.profile-avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-weight:700}
+.profile-avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-weight:700;overflow:hidden}
+.profile-avatar img{width:100%;height:100%;display:block}
 .profile-entry strong{display:block;font-size:13px;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .profile-entry span{display:block;margin-top:2px;color:var(--muted);font-size:12px}
 .content{padding:28px;min-width:0}
@@ -147,27 +161,39 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 <body>
 <div id="toast" class="toast"></div>
 <section id="login">
-  <form class="login-card" id="loginForm">
-    <div class="brand-row"><img class="app-icon" src="/favicon.svg" alt=""><div class="brand">Config Center</div></div>
-    <p>轻量配置管理</p>
-    <div class="field"><label>用户名</label><input name="username" value="admin" autocomplete="username" required></div>
-    <div class="field"><label>密码</label><input name="password" type="password" autocomplete="current-password" required></div>
-    <div id="mfaPanel" class="mfa-panel hidden">
-      <h3 id="mfaTitle">二次验证</h3>
-      <p id="mfaHelp">请输入验证器中的 6 位动态验证码。</p>
-      <div id="mfaSetup" class="hidden">
+  <div class="login-shell">
+    <form class="login-card" id="loginForm">
+      <div class="login-brand">
+        <img class="brand-orb" src="/logo-avatar.svg" alt="">
+        <div class="brand">Config Center</div>
+        <p>轻量配置管理，让配置落地到项目本地。</p>
+      </div>
+      <div class="field"><label>用户名</label><input name="username" value="admin" autocomplete="username" required></div>
+      <div class="field"><label>密码</label><input name="password" type="password" autocomplete="current-password" required></div>
+      <div class="login-actions">
+        <button type="submit" id="loginSubmit">登录</button>
+      </div>
+      <div class="status" id="loginStatus"></div>
+    </form>
+    <form class="login-card mfa-card hidden" id="mfaForm">
+      <div class="mfa-hero">
+        <img src="/logo-avatar.svg" alt="">
+        <h2 id="mfaTitle">二次验证</h2>
+        <p id="mfaHelp">账号密码已通过，请输入验证器中的 6 位动态验证码。</p>
+      </div>
+      <div id="mfaSetup" class="mfa-panel hidden">
         <p>首次登录需要先绑定验证器。请在 Google Authenticator、1Password、Microsoft Authenticator 等应用中手动添加下面的密钥。</p>
         <div class="mfa-secret" id="mfaSecret"></div>
         <p class="mono" id="mfaUri"></p>
       </div>
-      <div class="field"><label>动态验证码</label><input id="mfaCode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="6 位数字"></div>
-    </div>
-    <div class="login-actions">
-      <button type="submit" id="loginSubmit">登录</button>
-      <button type="button" class="secondary hidden" id="resetLogin">返回</button>
-    </div>
-    <div class="status" id="loginStatus"></div>
-  </form>
+      <div class="field mfa-code-field"><label>动态验证码</label><input id="mfaCode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="输入 6 位后自动验证"></div>
+      <div class="login-actions">
+        <button type="submit" id="mfaSubmit">验证并登录</button>
+        <button type="button" class="secondary" id="resetLogin">返回登录</button>
+      </div>
+      <div class="status" id="mfaStatus"></div>
+    </form>
+  </div>
 </section>
 <section id="app">
   <div class="shell">
@@ -181,7 +207,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
       </div>
       <div class="nav-foot">
         <button class="profile-entry" id="profileEntry">
-          <span class="profile-avatar" id="profileAvatar">A</span>
+          <span class="profile-avatar" id="profileAvatar"><img src="/logo-avatar.svg" alt=""></span>
           <span><strong id="profileEntryName">admin</strong><span>个人中心</span></span>
         </button>
         <span>Webman lightweight config service</span>
@@ -481,6 +507,7 @@ let editingIpWhitelistId = null;
 let toastTimer = null;
 let confirmResolver = null;
 let mfaChallengeToken = '';
+let mfaSubmitting = false;
 let profileCache = null;
 let profileMfaChallengeToken = '';
 
@@ -577,7 +604,7 @@ function showApp(username = '') {
   }
   $('who').textContent = '已登录';
   $('profileEntryName').textContent = displayName;
-  $('profileAvatar').textContent = (displayName || 'A').slice(0, 1).toUpperCase();
+  $('profileAvatar').title = displayName;
   $('login').style.display = 'none';
   $('app').style.display = 'block';
 }
@@ -1386,22 +1413,30 @@ async function disableProfileMfa() {
   }
 }
 
-function resetLoginMfa() {
+function resetLoginMfa(focusLogin = true) {
   mfaChallengeToken = '';
-  $('mfaPanel').classList.add('hidden');
+  mfaSubmitting = false;
+  $('loginForm').classList.remove('hidden');
+  $('mfaForm').classList.add('hidden');
   $('mfaSetup').classList.add('hidden');
   $('mfaSecret').textContent = '';
   $('mfaUri').textContent = '';
   $('mfaCode').value = '';
   $('loginSubmit').textContent = '登录';
-  $('resetLogin').classList.add('hidden');
+  $('loginSubmit').disabled = false;
+  $('mfaSubmit').disabled = false;
+  $('mfaSubmit').textContent = '验证并登录';
   $('loginStatus').textContent = '';
+  $('mfaStatus').textContent = '';
+  if (focusLogin) {
+    setTimeout(() => document.querySelector('#loginForm input[name="username"]')?.focus(), 0);
+  }
 }
 
 async function finishAdminLogin(data) {
   adminSession = data.token;
   localStorage.ccAdminSession = adminSession;
-  resetLoginMfa();
+  resetLoginMfa(false);
   showApp(data.username);
   showPage('config');
   await loadConfigs();
@@ -1409,33 +1444,35 @@ async function finishAdminLogin(data) {
 
 function showMfaChallenge(data) {
   mfaChallengeToken = data.challengeToken || '';
-  $('mfaPanel').classList.remove('hidden');
+  mfaSubmitting = false;
+  $('loginForm').classList.add('hidden');
+  $('mfaForm').classList.remove('hidden');
   $('mfaSetup').classList.toggle('hidden', !data.mfaSetupRequired);
   $('mfaTitle').textContent = data.mfaSetupRequired ? '绑定 MFA 验证器' : '二次验证';
   $('mfaHelp').textContent = data.mfaSetupRequired
     ? '绑定后输入验证器生成的 6 位动态验证码，验证通过后进入后台。'
-    : '请输入验证器中的 6 位动态验证码。';
+    : '账号密码已通过，请输入验证器中的 6 位动态验证码。';
   $('mfaSecret').textContent = data.secret || '';
   $('mfaUri').textContent = data.otpauthUri || '';
   $('mfaCode').value = '';
-  $('loginSubmit').textContent = data.mfaSetupRequired ? '绑定并登录' : '验证并登录';
-  $('resetLogin').classList.remove('hidden');
+  $('mfaSubmit').textContent = data.mfaSetupRequired ? '绑定并登录' : '验证并登录';
+  $('mfaSubmit').disabled = false;
   $('loginStatus').textContent = '';
+  $('mfaStatus').textContent = '';
   setTimeout(() => $('mfaCode').focus(), 0);
 }
 
 $('loginForm').onsubmit = async event => {
   event.preventDefault();
   const form = new FormData(event.target);
+  $('loginSubmit').disabled = true;
+  $('loginSubmit').textContent = '登录中...';
+  $('loginStatus').textContent = '';
   try {
-    const path = mfaChallengeToken ? '/api/admin/v1/auth/mfa/verify' : '/api/admin/v1/auth/login';
-    const payload = mfaChallengeToken
-      ? {challengeToken: mfaChallengeToken, code: $('mfaCode').value}
-      : Object.fromEntries(form);
-    const response = await fetch(adminApiPath(path), {
+    const response = await fetch(adminApiPath('/api/admin/v1/auth/login'), {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload)
+      body: JSON.stringify(Object.fromEntries(form))
     });
     const body = await response.json();
     if (!response.ok || body.code !== 0) throw Error(body.message || '登录失败');
@@ -1446,6 +1483,52 @@ $('loginForm').onsubmit = async event => {
     await finishAdminLogin(body.data);
   } catch (error) {
     $('loginStatus').textContent = error.message;
+  } finally {
+    $('loginSubmit').disabled = false;
+    $('loginSubmit').textContent = '登录';
+  }
+};
+
+$('mfaForm').onsubmit = async event => {
+  event.preventDefault();
+  if (mfaSubmitting) return;
+  const code = $('mfaCode').value.replace(/\D/g, '').slice(0, 6);
+  $('mfaCode').value = code;
+  if (code.length !== 6) {
+    $('mfaStatus').textContent = '请输入 6 位动态验证码';
+    $('mfaCode').focus();
+    return;
+  }
+  mfaSubmitting = true;
+  $('mfaSubmit').disabled = true;
+  $('mfaSubmit').textContent = '验证中...';
+  $('mfaStatus').textContent = '';
+  try {
+    const response = await fetch(adminApiPath('/api/admin/v1/auth/mfa/verify'), {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({challengeToken: mfaChallengeToken, code})
+    });
+    const body = await response.json();
+    if (!response.ok || body.code !== 0) throw Error(body.message || '验证失败');
+    await finishAdminLogin(body.data);
+  } catch (error) {
+    $('mfaStatus').textContent = error.message;
+    $('mfaCode').value = '';
+    setTimeout(() => $('mfaCode').focus(), 0);
+  } finally {
+    mfaSubmitting = false;
+    $('mfaSubmit').disabled = false;
+    $('mfaSubmit').textContent = $('mfaSetup').classList.contains('hidden') ? '验证并登录' : '绑定并登录';
+  }
+};
+
+$('mfaCode').oninput = event => {
+  const value = event.target.value.replace(/\D/g, '').slice(0, 6);
+  event.target.value = value;
+  $('mfaStatus').textContent = '';
+  if (value.length === 6 && !mfaSubmitting) {
+    $('mfaForm').requestSubmit();
   }
 };
 
