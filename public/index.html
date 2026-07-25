@@ -228,9 +228,9 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
         </div>
         <div class="panel">
           <div class="config-filter">
-            <div class="field"><label>搜索 Data ID / Group</label><input id="configKeyword" placeholder="输入关键字搜索"></div>
-            <div class="field"><label>Group 检索</label><input id="configGroupFilter" placeholder="例如 DEFAULT_GROUP"></div>
-            <div class="filter-actions"><button id="searchConfig">搜索</button><button class="secondary" id="resetConfigFilter">重置</button></div>
+            <div class="field"><label>关键词模糊搜索</label><input id="configKeyword" placeholder="输入 Data ID 或 Group，自动搜索"></div>
+            <div class="field"><label>Group 检索</label><input id="configGroupFilter" list="configGroupOptions" placeholder="选择或输入 Group，自动搜索"><datalist id="configGroupOptions"></datalist></div>
+            <div class="filter-actions"><button class="secondary" id="resetConfigFilter">重置</button></div>
           </div>
           <table class="table">
             <thead><tr><th>Data ID</th><th>Group</th><th>格式</th><th>版本</th><th>更新时间</th><th>操作</th></tr></thead>
@@ -513,6 +513,8 @@ let editor = null;
 let readonlyEditor = null;
 let configCache = new Map();
 let configListState = {page: 1, pageSize: 20, total: 0, keyword: '', group: ''};
+let configSearchTimer = null;
+let configLoadSeq = 0;
 let historyCache = new Map();
 let historyContext = null;
 let detailHistoryId = null;
@@ -736,6 +738,18 @@ function configQueryString() {
   return params.toString();
 }
 
+async function loadConfigGroups() {
+  const groups = await api('/api/admin/v1/config/groups');
+  $('configGroupOptions').innerHTML = (groups || []).map(group => `<option value="${escapeHtml(group)}"></option>`).join('');
+}
+
+function scheduleConfigSearch(delay = 300) {
+  clearTimeout(configSearchTimer);
+  configSearchTimer = setTimeout(() => {
+    loadConfigs(true).catch(error => setStatus(error.message, true));
+  }, delay);
+}
+
 function renderConfigPager() {
   const pageCount = Math.max(1, Math.ceil(configListState.total / configListState.pageSize));
   const start = configListState.total === 0 ? 0 : (configListState.page - 1) * configListState.pageSize + 1;
@@ -749,6 +763,7 @@ function renderConfigPager() {
 }
 
 async function loadConfigs(resetPage = false) {
+  const requestSeq = ++configLoadSeq;
   if (resetPage) {
     configListState.page = 1;
   }
@@ -756,6 +771,9 @@ async function loadConfigs(resetPage = false) {
   configListState.group = $('configGroupFilter')?.value.trim() || '';
 
   const data = await api('/api/admin/v1/config?' + configQueryString());
+  if (requestSeq !== configLoadSeq) {
+    return;
+  }
   const rows = Array.isArray(data) ? data : (data.rows || []);
   configListState.total = Number(data.total ?? rows.length);
   configListState.page = Number(data.page || configListState.page || 1);
@@ -873,7 +891,7 @@ async function importConfigZip() {
     form.append('file', file);
     form.append('namespace', 'public');
     const result = await api('/api/admin/v1/config/import', {method: 'POST', body: form});
-    await loadConfigs();
+    await Promise.all([loadConfigGroups(), loadConfigs()]);
 
     const message = `导入完成：新增 ${result.created}，更新 ${result.updated}，跳过 ${result.skipped}，失败 ${result.failed}`;
     setImportModalStatus(message, result.failed > 0);
@@ -979,7 +997,7 @@ async function publishConfig() {
       expectedRevision: current?.revision || undefined
     };
     const result = await api('/api/admin/v1/config/publish', {method: 'POST', body});
-    await loadConfigs();
+    await Promise.all([loadConfigGroups(), loadConfigs()]);
     current = {...body, revision: result.revision, content: body.content};
     $('modalFileName').textContent = body.dataId;
     $('modalRevision').textContent = 'r' + result.revision;
@@ -1098,7 +1116,7 @@ async function deleteConfig(group, dataId) {
         expectedRevision: config?.revision || undefined,
       }
     });
-    await loadConfigs();
+    await Promise.all([loadConfigGroups(), loadConfigs()]);
     showToast('配置已删除');
   } catch (error) {
     setStatus(error.message, true);
@@ -1496,6 +1514,7 @@ async function finishAdminLogin(data) {
   resetLoginMfa(false);
   showApp(data.username);
   showPage('config');
+  await loadConfigGroups();
   await loadConfigs();
 }
 
@@ -1589,14 +1608,14 @@ $('mfaCode').oninput = event => {
   }
 };
 
-$('navConfig').onclick = () => {showPage('config'); loadConfigs().catch(error => setStatus(error.message, true));};
+$('navConfig').onclick = () => {showPage('config'); Promise.all([loadConfigGroups(), loadConfigs()]).catch(error => setStatus(error.message, true));};
 $('navAccount').onclick = () => {showPage('account'); loadAccounts().catch(error => setAccountStatus(error.message, true));};
 $('navIpWhitelist').onclick = () => {showPage('ipWhitelist'); loadIpWhitelist().catch(error => setIpWhitelistStatus(error.message, true));};
 $('navGuide').onclick = () => {showPage('guide'); loadGuide().catch(error => setGuideStatus(error.message, true));};
 $('profileEntry').onclick = () => {showPage('profile'); loadProfile().catch(error => setProfileStatus(error.message, true));};
-$('refreshConfig').onclick = () => loadConfigs().catch(error => setStatus(error.message, true));
-$('searchConfig').onclick = () => loadConfigs(true).catch(error => setStatus(error.message, true));
+$('refreshConfig').onclick = () => Promise.all([loadConfigGroups(), loadConfigs()]).catch(error => setStatus(error.message, true));
 $('resetConfigFilter').onclick = () => {
+  clearTimeout(configSearchTimer);
   $('configKeyword').value = '';
   $('configGroupFilter').value = '';
   loadConfigs(true).catch(error => setStatus(error.message, true));
@@ -1612,12 +1631,8 @@ $('configNextPage').onclick = () => {
   configListState.page += 1;
   loadConfigs().catch(error => setStatus(error.message, true));
 };
-$('configKeyword').addEventListener('keydown', event => {
-  if (event.key === 'Enter') loadConfigs(true).catch(error => setStatus(error.message, true));
-});
-$('configGroupFilter').addEventListener('keydown', event => {
-  if (event.key === 'Enter') loadConfigs(true).catch(error => setStatus(error.message, true));
-});
+$('configKeyword').addEventListener('input', () => scheduleConfigSearch());
+$('configGroupFilter').addEventListener('input', () => scheduleConfigSearch());
 $('refreshAccount').onclick = () => loadAccounts().catch(error => setAccountStatus(error.message, true));
 $('refreshIpWhitelist').onclick = () => loadIpWhitelist().catch(error => setIpWhitelistStatus(error.message, true));
 $('refreshGuide').onclick = () => loadGuide().catch(error => setGuideStatus(error.message, true));
@@ -1686,7 +1701,7 @@ document.addEventListener('keydown', event => {
 if (adminSession) {
   showApp();
   showPage('config');
-  loadConfigs().catch(() => {
+  Promise.all([loadConfigGroups(), loadConfigs()]).catch(() => {
     localStorage.removeItem('ccAdminSession');
     location.reload();
   });

@@ -53,6 +53,20 @@ class ConfigController
         ]]);
     }
 
+    public function groups(Request $request): Response
+    {
+        $namespace = (string) ($request->get('namespace') ?: config('config-center.default_namespace'));
+        $groups = ConfigItem::query()
+            ->where('namespace', $namespace)
+            ->select('config_group')
+            ->distinct()
+            ->orderBy('config_group')
+            ->pluck('config_group')
+            ->values();
+
+        return json(['code' => 0, 'data' => $groups]);
+    }
+
     public function history(Request $request): Response
     {
         $namespace = (string) ($request->get('namespace') ?: config('config-center.default_namespace'));

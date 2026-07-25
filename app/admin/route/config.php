@@ -20,6 +20,7 @@ Route::group($adminPrefix . '/api/admin/v1', function () {
     Route::post('/profile/mfa/enable', [AuthController::class, 'enableMfa']);
     Route::post('/profile/mfa/disable', [AuthController::class, 'disableMfa']);
     Route::get('/config', [ConfigController::class, 'index']);
+    Route::get('/config/groups', [ConfigController::class, 'groups']);
     Route::get('/config/detail', [ConfigController::class, 'show']);
     Route::get('/config/history', [ConfigController::class, 'history']);
     Route::post('/config/publish', [ConfigController::class, 'publish']);
