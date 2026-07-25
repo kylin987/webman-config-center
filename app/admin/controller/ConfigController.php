@@ -16,15 +16,41 @@ class ConfigController
     public function index(Request $request): Response
     {
         $namespace = (string) ($request->get('namespace') ?: config('config-center.default_namespace'));
-        $items = ConfigItem::query()->where('namespace', $namespace)->orderBy('config_group')->orderBy('data_id')->get();
-        return json(['code' => 0, 'data' => $items->map(fn (ConfigItem $item) => [
-            'namespace' => $item->namespace,
-            'group' => $item->config_group,
-            'dataId' => $item->data_id,
-            'format' => $item->format,
-            'revision' => (int) $item->revision,
-            'updatedAt' => DateTimeFormatter::beijing($item->updated_at),
-        ])->values()]);
+        $page = max(1, (int) $request->get('page', 1));
+        $pageSize = min(100, max(5, (int) $request->get('pageSize', 20)));
+        $keyword = trim((string) $request->get('keyword', ''));
+        $group = trim((string) $request->get('group', ''));
+
+        $query = ConfigItem::query()->where('namespace', $namespace);
+        if ($keyword !== '') {
+            $query->where(function ($query) use ($keyword) {
+                $query->where('data_id', 'like', '%' . $keyword . '%')
+                    ->orWhere('config_group', 'like', '%' . $keyword . '%');
+            });
+        }
+        if ($group !== '') {
+            $query->where('config_group', 'like', '%' . $group . '%');
+        }
+
+        $total = (clone $query)->count();
+        $items = $query->orderBy('config_group')
+            ->orderBy('data_id')
+            ->forPage($page, $pageSize)
+            ->get();
+
+        return json(['code' => 0, 'data' => [
+            'rows' => $items->map(fn (ConfigItem $item) => [
+                'namespace' => $item->namespace,
+                'group' => $item->config_group,
+                'dataId' => $item->data_id,
+                'format' => $item->format,
+                'revision' => (int) $item->revision,
+                'updatedAt' => DateTimeFormatter::beijing($item->updated_at),
+            ])->values(),
+            'total' => (int) $total,
+            'page' => $page,
+            'pageSize' => $pageSize,
+        ]]);
     }
 
     public function history(Request $request): Response

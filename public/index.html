@@ -30,9 +30,9 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .login-card:after{content:"";position:absolute;right:-52px;top:-56px;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,rgba(25,211,255,.25),transparent 68%);pointer-events:none}
 .login-brand{display:grid;place-items:center;text-align:center;margin-bottom:20px;position:relative;z-index:1}
 .login-brand .brand{margin-top:10px}
-.brand-orb{width:118px;height:auto;border-radius:0;box-shadow:none}
+.brand-orb{width:118px;height:118px;object-fit:contain;border-radius:0;box-shadow:none}
 .brand-row{display:flex;align-items:center;gap:10px}
-.app-icon{width:32px;height:32px;border-radius:10px;box-shadow:0 8px 18px rgba(22,119,255,.22)}
+.app-icon{width:32px;height:32px;object-fit:contain;border-radius:10px;box-shadow:0 8px 18px rgba(22,119,255,.22)}
 .brand{font-weight:700;font-size:24px;letter-spacing:.2px;color:#0f172a}
 .login-card p{color:var(--muted);margin:6px 0 24px;line-height:1.7}
 .field{display:grid;gap:7px;margin:12px 0}
@@ -41,7 +41,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .mfa-code-field input{height:58px;text-align:center;font-size:28px;font-weight:750;letter-spacing:10px;font-family:"SFMono-Regular",Consolas,monospace;color:#0f172a}
 .mfa-code-field input::placeholder{font-size:14px;letter-spacing:0;font-weight:400;color:#94a3b8}
 .mfa-hero{display:grid;justify-items:center;text-align:center;gap:8px;margin-bottom:16px}
-.mfa-hero img{width:110px;height:auto;border-radius:0;box-shadow:none}
+.mfa-hero img{width:110px;height:110px;object-fit:contain;border-radius:0;box-shadow:none}
 .mfa-hero h2{margin:4px 0 0;font-size:22px;color:#0f172a}
 .mfa-hero p{margin:0;color:var(--muted)}
 @keyframes mfaIn{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
@@ -53,18 +53,18 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .login-actions button{flex:1}
 .login-actions button.secondary{flex:0 0 auto}
 #app{display:none;min-height:100vh}
-.shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
-.nav{background:var(--nav);color:var(--ink);padding:22px 14px;display:flex;flex-direction:column;gap:18px;border-right:1px solid var(--line);box-shadow:4px 0 18px rgba(15,23,42,.03)}
+.shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;align-items:start}
+.nav{position:sticky;top:0;height:100vh;background:var(--nav);color:var(--ink);padding:22px 14px;display:flex;flex-direction:column;gap:18px;border-right:1px solid var(--line);box-shadow:4px 0 18px rgba(15,23,42,.03);overflow:hidden}
 .nav .brand{color:#0f172a;font-size:21px;padding:0 8px}
 .nav .brand-row{padding:0 8px}
 .nav .brand-row .brand{padding:0}
 .nav small{display:block;color:var(--muted);padding:3px 8px 0}
-.menu{display:grid;gap:6px}
+.menu{display:grid;gap:6px;overflow:auto;padding-right:2px}
 .menu button{width:100%;text-align:left;background:transparent;color:#4b5563;border-radius:8px;box-shadow:none;border:1px solid transparent;padding:10px 12px;position:relative}
 .menu button:hover{background:#f8fafc;color:var(--accent);box-shadow:none}
 .menu button.active{background:var(--accent-soft);color:var(--accent);font-weight:600;box-shadow:none}
 .menu button.active:before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:99px;background:var(--accent)}
-.nav-foot{margin-top:auto;padding:0 8px;display:grid;gap:10px;color:#9ca3af;font-size:12px}
+.nav-foot{margin-top:auto;padding:0 8px;display:grid;gap:10px;color:#9ca3af;font-size:12px;flex:0 0 auto}
 .profile-entry{width:100%;display:grid;grid-template-columns:32px 1fr;gap:10px;align-items:center;text-align:left;background:#fbfdff;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px;box-shadow:none}
 .profile-entry:hover{background:#f8fbff;border-color:#bae0ff;color:var(--accent);box-shadow:0 8px 20px rgba(22,119,255,.08)}
 .profile-avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-weight:700;overflow:hidden}
@@ -76,6 +76,9 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .page-head h1{font-size:22px;margin:0;color:#0f172a;font-weight:650}
 .page-head p{margin:4px 0 0;color:var(--muted)}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap}
+.config-filter{display:grid;grid-template-columns:minmax(220px,1fr) minmax(180px,260px) auto;gap:10px;align-items:end;padding:14px 16px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#fff,#fbfdff)}
+.config-filter .field{margin:0}
+.filter-actions{display:flex;gap:8px;align-items:center}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:16px;box-shadow:var(--shadow);overflow:hidden}
 .panel-head{display:flex;justify-content:space-between;align-items:center;padding:13px 16px;border-bottom:1px solid var(--line);background:#fbfdff}
 .panel-head h2{font-size:15px;margin:0;color:#111827}
@@ -84,6 +87,10 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .table th{font-size:12px;color:#6b7280;font-weight:600;background:#f8fafc}
 .table tr:last-child td{border-bottom:0}
 .table tr:hover td{background:#f8fbff}
+.table-actions{display:flex;gap:6px;flex-wrap:wrap}
+.pager{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;background:#fbfdff;border-top:1px solid var(--line);color:var(--muted)}
+.pager-actions{display:flex;gap:8px;align-items:center}
+.pager-current{min-width:76px;text-align:center;color:#334155}
 .mono{font-family:"SFMono-Regular",Consolas,monospace;font-size:12px;color:var(--muted)}
 .tag{display:inline-block;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:12px;border:1px solid #bae0ff}
 .tag.off{background:#f9fafb;color:#6b7280;border-color:#e5e7eb}
@@ -154,7 +161,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .editor-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:#fbfdff;border-top:1px solid var(--line)}
 .modal-status{color:var(--muted)}
 .editor-actions{display:flex;gap:8px}
-@media(max-width:900px){.shell{grid-template-columns:1fr}.nav{position:sticky;top:0;z-index:2}.content{padding:16px}.editor-fields{grid-template-columns:1fr}.page-head{align-items:flex-start;flex-direction:column}.guide-grid{grid-template-columns:1fr}.guide-meta{grid-template-columns:1fr 1fr}.modal{padding:10px}.modal-card{width:100%;height:calc(100vh - 20px)}.account-modal-card{height:auto}.file-name strong{font-size:16px}}
+@media(max-width:900px){.shell{grid-template-columns:1fr}.nav{position:sticky;top:0;z-index:2;height:auto;max-height:70vh;overflow:auto}.content{padding:16px}.editor-fields{grid-template-columns:1fr}.page-head{align-items:flex-start;flex-direction:column}.config-filter{grid-template-columns:1fr}.filter-actions{justify-content:flex-start}.pager{align-items:flex-start;flex-direction:column}.guide-grid{grid-template-columns:1fr}.guide-meta{grid-template-columns:1fr 1fr}.modal{padding:10px}.modal-card{width:100%;height:calc(100vh - 20px)}.account-modal-card{height:auto}.file-name strong{font-size:16px}}
 @media(max-width:900px){.profile-grid{grid-template-columns:1fr}.mfa-bind-box{grid-template-columns:1fr}.mfa-qr{width:180px}}
 </style>
 </head>
@@ -220,11 +227,20 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
           <div class="toolbar"><button class="secondary" id="refreshConfig">刷新</button><button class="secondary" id="exportConfig">批量导出</button><button class="secondary" id="openImportConfig">批量导入</button><button id="newConfig">新增配置</button></div>
         </div>
         <div class="panel">
+          <div class="config-filter">
+            <div class="field"><label>搜索 Data ID / Group</label><input id="configKeyword" placeholder="输入关键字搜索"></div>
+            <div class="field"><label>Group 检索</label><input id="configGroupFilter" placeholder="例如 DEFAULT_GROUP"></div>
+            <div class="filter-actions"><button id="searchConfig">搜索</button><button class="secondary" id="resetConfigFilter">重置</button></div>
+          </div>
           <table class="table">
             <thead><tr><th>Data ID</th><th>Group</th><th>格式</th><th>版本</th><th>更新时间</th><th>操作</th></tr></thead>
             <tbody id="configRows"></tbody>
           </table>
           <div id="configEmpty" class="empty hidden">暂无配置</div>
+          <div class="pager" id="configPager">
+            <div id="configPageSummary">共 0 条</div>
+            <div class="pager-actions"><button class="secondary small" id="configPrevPage">上一页</button><span class="pager-current" id="configPageCurrent">1 / 1</span><button class="secondary small" id="configNextPage">下一页</button></div>
+          </div>
         </div>
         <div class="status" id="status"></div>
       </section>
@@ -496,6 +512,7 @@ let current = null;
 let editor = null;
 let readonlyEditor = null;
 let configCache = new Map();
+let configListState = {page: 1, pageSize: 20, total: 0, keyword: '', group: ''};
 let historyCache = new Map();
 let historyContext = null;
 let detailHistoryId = null;
@@ -709,8 +726,47 @@ function closeConfirmModal(result = false) {
   }
 }
 
-async function loadConfigs() {
-  const rows = await api('/api/admin/v1/config');
+function configQueryString() {
+  const params = new URLSearchParams({
+    page: String(configListState.page),
+    pageSize: String(configListState.pageSize)
+  });
+  if (configListState.keyword) params.set('keyword', configListState.keyword);
+  if (configListState.group) params.set('group', configListState.group);
+  return params.toString();
+}
+
+function renderConfigPager() {
+  const pageCount = Math.max(1, Math.ceil(configListState.total / configListState.pageSize));
+  const start = configListState.total === 0 ? 0 : (configListState.page - 1) * configListState.pageSize + 1;
+  const end = Math.min(configListState.total, configListState.page * configListState.pageSize);
+  $('configPageSummary').textContent = configListState.total === 0
+    ? '共 0 条'
+    : `共 ${configListState.total} 条，当前 ${start}-${end} 条`;
+  $('configPageCurrent').textContent = `${configListState.page} / ${pageCount}`;
+  $('configPrevPage').disabled = configListState.page <= 1;
+  $('configNextPage').disabled = configListState.page >= pageCount;
+}
+
+async function loadConfigs(resetPage = false) {
+  if (resetPage) {
+    configListState.page = 1;
+  }
+  configListState.keyword = $('configKeyword')?.value.trim() || '';
+  configListState.group = $('configGroupFilter')?.value.trim() || '';
+
+  const data = await api('/api/admin/v1/config?' + configQueryString());
+  const rows = Array.isArray(data) ? data : (data.rows || []);
+  configListState.total = Number(data.total ?? rows.length);
+  configListState.page = Number(data.page || configListState.page || 1);
+  configListState.pageSize = Number(data.pageSize || configListState.pageSize || 20);
+
+  const pageCount = Math.max(1, Math.ceil(configListState.total / configListState.pageSize));
+  if (configListState.total > 0 && configListState.page > pageCount) {
+    configListState.page = pageCount;
+    return loadConfigs();
+  }
+
   configCache = new Map(rows.map(row => [configKey(row.group, row.dataId), row]));
   $('configRows').innerHTML = rows.map(row => `<tr>
     <td><b>${escapeHtml(row.dataId)}</b></td>
@@ -718,14 +774,15 @@ async function loadConfigs() {
     <td><span class="tag">${escapeHtml(row.format)}</span></td>
     <td>r${row.revision}</td>
     <td class="mono">${escapeHtml(row.updatedAt || '-')}</td>
-    <td>
+    <td><div class="table-actions">
       <button class="secondary small" data-detail-config="${configKey(row.group, row.dataId)}">详情</button>
       <button class="secondary small" data-open-config="${configKey(row.group, row.dataId)}">编辑</button>
       <button class="secondary small" data-history-config="${configKey(row.group, row.dataId)}">历史版本</button>
       <button class="danger small" data-delete-config="${configKey(row.group, row.dataId)}">删除</button>
-    </td>
+    </div></td>
   </tr>`).join('');
   $('configEmpty').classList.toggle('hidden', rows.length > 0);
+  renderConfigPager();
   document.querySelectorAll('[data-detail-config]').forEach(button => {
     button.onclick = () => {
       const [group, dataId] = decodeConfigKey(button.dataset.detailConfig);
@@ -1538,6 +1595,29 @@ $('navIpWhitelist').onclick = () => {showPage('ipWhitelist'); loadIpWhitelist().
 $('navGuide').onclick = () => {showPage('guide'); loadGuide().catch(error => setGuideStatus(error.message, true));};
 $('profileEntry').onclick = () => {showPage('profile'); loadProfile().catch(error => setProfileStatus(error.message, true));};
 $('refreshConfig').onclick = () => loadConfigs().catch(error => setStatus(error.message, true));
+$('searchConfig').onclick = () => loadConfigs(true).catch(error => setStatus(error.message, true));
+$('resetConfigFilter').onclick = () => {
+  $('configKeyword').value = '';
+  $('configGroupFilter').value = '';
+  loadConfigs(true).catch(error => setStatus(error.message, true));
+};
+$('configPrevPage').onclick = () => {
+  if (configListState.page <= 1) return;
+  configListState.page -= 1;
+  loadConfigs().catch(error => setStatus(error.message, true));
+};
+$('configNextPage').onclick = () => {
+  const pageCount = Math.max(1, Math.ceil(configListState.total / configListState.pageSize));
+  if (configListState.page >= pageCount) return;
+  configListState.page += 1;
+  loadConfigs().catch(error => setStatus(error.message, true));
+};
+$('configKeyword').addEventListener('keydown', event => {
+  if (event.key === 'Enter') loadConfigs(true).catch(error => setStatus(error.message, true));
+});
+$('configGroupFilter').addEventListener('keydown', event => {
+  if (event.key === 'Enter') loadConfigs(true).catch(error => setStatus(error.message, true));
+});
 $('refreshAccount').onclick = () => loadAccounts().catch(error => setAccountStatus(error.message, true));
 $('refreshIpWhitelist').onclick = () => loadIpWhitelist().catch(error => setIpWhitelistStatus(error.message, true));
 $('refreshGuide').onclick = () => loadGuide().catch(error => setGuideStatus(error.message, true));
