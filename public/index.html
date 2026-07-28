@@ -398,7 +398,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
     <div class="editor-fields">
       <div class="field"><label>Data ID</label><input id="dataId"></div>
       <div class="field"><label>Group</label><input id="group" value="DEFAULT_GROUP"></div>
-      <div class="field"><label>格式</label><select id="format"><option>php</option><option>json</option><option>yaml</option><option>yml</option><option>ini</option><option>txt</option></select></div>
+      <div class="field"><label>格式</label><select id="format"><option>php</option><option>php_code</option><option>json</option><option>yaml</option><option>yml</option><option>ini</option><option>txt</option></select></div>
     </div>
     <div id="codeEditor"></div>
     <footer class="editor-footer">
@@ -569,6 +569,7 @@ function initReadonlyEditor() {
 function editorMode(format) {
   return {
     php: 'ace/mode/php',
+    php_code: 'ace/mode/php',
     json: 'ace/mode/json',
     yaml: 'ace/mode/yaml',
     yml: 'ace/mode/yaml',

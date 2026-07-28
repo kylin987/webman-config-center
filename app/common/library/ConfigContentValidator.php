@@ -3,12 +3,16 @@
 namespace app\common\library;
 
 use InvalidArgumentException;
+use PhpParser\Node;
+use PhpParser\Node\Expr;
+use PhpParser\Node\Scalar;
+use PhpParser\Node\Stmt;
 use PhpParser\ParserFactory;
 use Symfony\Component\Yaml\Yaml;
 
 class ConfigContentValidator
 {
-    private const FORMATS = ['php', 'json', 'yaml', 'yml', 'ini', 'txt'];
+    private const FORMATS = ['php', 'php_code', 'json', 'yaml', 'yml', 'ini', 'txt'];
 
     public function validate(string $format, string $content): void
     {
@@ -22,6 +26,7 @@ class ConfigContentValidator
 
         match ($format) {
             'php' => $this->validatePhp($content),
+            'php_code' => $this->validatePhpCode($content),
             'json' => $this->validateJson($content),
             'yaml', 'yml' => $this->validateYaml($content),
             'ini' => $this->validateIni($content),
@@ -32,11 +37,46 @@ class ConfigContentValidator
     private function validatePhp(string $content): void
     {
         try {
-            $parser = (new ParserFactory())->createForNewestSupportedVersion();
-            $parser->parse($content);
+            $statements = (new ParserFactory())->createForNewestSupportedVersion()->parse($content);
+            if (count($statements) !== 1 || !$statements[0] instanceof Stmt\Return_ || !$statements[0]->expr) {
+                throw new InvalidArgumentException('PHP 配置必须是单个 return 静态表达式');
+            }
+            $this->literal($statements[0]->expr);
+        } catch (InvalidArgumentException $exception) {
+            throw $exception;
         } catch (\Throwable) {
             throw new InvalidArgumentException('PHP 配置语法无效');
         }
+    }
+
+    private function validatePhpCode(string $content): void
+    {
+        try {
+            (new ParserFactory())->createForNewestSupportedVersion()->parse($content);
+        } catch (\Throwable) {
+            throw new InvalidArgumentException('PHP 代码语法无效');
+        }
+    }
+
+    private function literal(Node $node): void
+    {
+        if ($node instanceof Scalar\String_ || $node instanceof Scalar\LNumber || $node instanceof Scalar\DNumber) return;
+        if ($node instanceof Expr\ConstFetch && in_array(strtolower($node->name->toString()), ['true', 'false', 'null'], true)) return;
+        if ($node instanceof Expr\UnaryMinus || $node instanceof Expr\UnaryPlus) {
+            $this->literal($node->expr);
+            return;
+        }
+        if ($node instanceof Expr\Array_) {
+            foreach ($node->items as $item) {
+                if (!$item instanceof Expr\ArrayItem || !$item->value) {
+                    throw new InvalidArgumentException('数组项无效');
+                }
+                if ($item->key) $this->literal($item->key);
+                $this->literal($item->value);
+            }
+            return;
+        }
+        throw new InvalidArgumentException('PHP 配置不能包含动态表达式');
     }
 
     private function validateJson(string $content): void
