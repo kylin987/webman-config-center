@@ -148,6 +148,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .editor-tab{height:56px;background:#fff;color:#111827;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding:0 14px 0 18px}
 .editor-tab button.icon{color:#94a3b8}
 .editor-tab button.icon:hover{background:#f1f5f9;color:#0f172a}
+.modal-head-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
 .file-name{display:flex;align-items:center;gap:10px;min-width:0}
 .file-dot{width:4px;height:22px;border-radius:99px;background:var(--accent);box-shadow:none;flex:0 0 auto}
 .file-name strong{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:650}
@@ -448,7 +449,10 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
   <div class="modal-card history-modal-card">
     <header class="editor-tab">
       <div class="file-name"><span class="file-dot"></span><strong id="accessTitle">最近读取</strong><small id="accessMeta"></small></div>
-      <button class="icon" id="closeAccessModal" title="关闭">×</button>
+      <div class="modal-head-actions">
+        <button class="secondary small" id="refreshAccessModal" type="button">刷新</button>
+        <button class="icon" id="closeAccessModal" title="关闭">×</button>
+      </div>
     </header>
     <div class="history-body">
       <table class="table">
@@ -536,6 +540,7 @@ let configSearchTimer = null;
 let configLoadSeq = 0;
 let historyCache = new Map();
 let historyContext = null;
+let accessContext = null;
 let detailHistoryId = null;
 let accountCache = new Map();
 let ipWhitelistCache = new Map();
@@ -1022,6 +1027,7 @@ function closeHistoryModal() {
 function closeAccessModal() {
   $('accessModal').classList.add('hidden');
   setAccessStatus('');
+  accessContext = null;
 }
 
 async function publishConfig() {
@@ -1092,15 +1098,23 @@ async function openHistoryModal(group, dataId) {
 }
 
 async function openAccessModal(group, dataId) {
-  try {
-    $('accessTitle').textContent = '最近读取';
-    $('accessMeta').textContent = `${dataId} / ${group}`;
-    $('accessRows').innerHTML = '';
-    $('accessEmpty').classList.add('hidden');
-    setAccessStatus('正在读取...');
-    $('accessModal').classList.remove('hidden');
+  accessContext = {group, dataId};
+  $('accessTitle').textContent = '最近读取';
+  $('accessMeta').textContent = `${dataId} / ${group}`;
+  $('accessRows').innerHTML = '';
+  $('accessEmpty').classList.add('hidden');
+  $('accessModal').classList.remove('hidden');
+  await loadAccessRows();
+}
 
-    const rows = await api('/api/admin/v1/config/access?group=' + encodeURIComponent(group) + '&dataId=' + encodeURIComponent(dataId));
+async function loadAccessRows() {
+  if (!accessContext) return;
+  const refreshButton = $('refreshAccessModal');
+  try {
+    refreshButton.disabled = true;
+    refreshButton.textContent = '刷新中...';
+    setAccessStatus('正在读取...');
+    const rows = await api('/api/admin/v1/config/access?group=' + encodeURIComponent(accessContext.group) + '&dataId=' + encodeURIComponent(accessContext.dataId));
     $('accessRows').innerHTML = rows.map(row => `<tr>
       <td><b>${escapeHtml(row.clientName || '-')}</b></td>
       <td>${escapeHtml(row.clientUsername || '-')}</td>
@@ -1115,6 +1129,9 @@ async function openAccessModal(group, dataId) {
   } catch (error) {
     setAccessStatus(error.message, true);
     showToast(error.message, true);
+  } finally {
+    refreshButton.disabled = false;
+    refreshButton.textContent = '刷新';
   }
 }
 
@@ -1727,6 +1744,7 @@ $('closeHistoryModal').onclick = closeHistoryModal;
 $('closeHistoryModalFooter').onclick = closeHistoryModal;
 $('closeAccessModal').onclick = closeAccessModal;
 $('closeAccessModalFooter').onclick = closeAccessModal;
+$('refreshAccessModal').onclick = loadAccessRows;
 $('publishHistoryFromDetail').onclick = () => detailHistoryId && publishHistoryVersion(detailHistoryId);
 $('closeImportModal').onclick = closeImportModal;
 $('cancelImport').onclick = closeImportModal;
