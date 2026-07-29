@@ -444,6 +444,25 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
     </footer>
   </div>
 </section>
+<section id="accessModal" class="modal hidden" aria-modal="true">
+  <div class="modal-card history-modal-card">
+    <header class="editor-tab">
+      <div class="file-name"><span class="file-dot"></span><strong id="accessTitle">最近读取</strong><small id="accessMeta"></small></div>
+      <button class="icon" id="closeAccessModal" title="关闭">×</button>
+    </header>
+    <div class="history-body">
+      <table class="table">
+        <thead><tr><th>项目</th><th>客户端账号</th><th>最近读取</th><th>IP</th><th>Pod/主机</th><th>版本</th><th>次数</th></tr></thead>
+        <tbody id="accessRows"></tbody>
+      </table>
+      <div id="accessEmpty" class="history-empty hidden">暂无读取记录</div>
+    </div>
+    <footer class="editor-footer">
+      <div class="modal-status" id="accessStatus"></div>
+      <div class="editor-actions"><button class="secondary" id="closeAccessModalFooter">关闭</button></div>
+    </footer>
+  </div>
+</section>
 <section id="accountModal" class="modal hidden" aria-modal="true">
   <div class="modal-card account-modal-card">
     <header class="editor-tab">
@@ -666,6 +685,11 @@ function setHistoryStatus(text, error = false) {
   $('historyStatus').className = 'modal-status ' + (error ? 'error' : '');
 }
 
+function setAccessStatus(text, error = false) {
+  $('accessStatus').textContent = text;
+  $('accessStatus').className = 'modal-status ' + (error ? 'error' : '');
+}
+
 function setAccountStatus(text, error = false) {
   $('accountStatus').textContent = text;
   $('accountStatus').className = 'status ' + (error ? 'error' : '');
@@ -801,6 +825,7 @@ async function loadConfigs(resetPage = false) {
       <button class="secondary small" data-detail-config="${configKey(row.group, row.dataId)}">详情</button>
       <button class="secondary small" data-open-config="${configKey(row.group, row.dataId)}">编辑</button>
       <button class="secondary small" data-history-config="${configKey(row.group, row.dataId)}">历史版本</button>
+      <button class="secondary small" data-access-config="${configKey(row.group, row.dataId)}">最近读取</button>
       <button class="danger small" data-delete-config="${configKey(row.group, row.dataId)}">删除</button>
     </div></td>
   </tr>`).join('');
@@ -822,6 +847,12 @@ async function loadConfigs(resetPage = false) {
     button.onclick = () => {
       const [group, dataId] = decodeConfigKey(button.dataset.historyConfig);
       openHistoryModal(group, dataId);
+    };
+  });
+  document.querySelectorAll('[data-access-config]').forEach(button => {
+    button.onclick = () => {
+      const [group, dataId] = decodeConfigKey(button.dataset.accessConfig);
+      openAccessModal(group, dataId);
     };
   });
   document.querySelectorAll('[data-delete-config]').forEach(button => {
@@ -988,6 +1019,11 @@ function closeHistoryModal() {
   setHistoryStatus('');
 }
 
+function closeAccessModal() {
+  $('accessModal').classList.add('hidden');
+  setAccessStatus('');
+}
+
 async function publishConfig() {
   const publishButton = $('publish');
   try {
@@ -1052,6 +1088,33 @@ async function openHistoryModal(group, dataId) {
     });
   } catch (error) {
     setStatus(error.message, true);
+  }
+}
+
+async function openAccessModal(group, dataId) {
+  try {
+    $('accessTitle').textContent = '最近读取';
+    $('accessMeta').textContent = `${dataId} / ${group}`;
+    $('accessRows').innerHTML = '';
+    $('accessEmpty').classList.add('hidden');
+    setAccessStatus('正在读取...');
+    $('accessModal').classList.remove('hidden');
+
+    const rows = await api('/api/admin/v1/config/access?group=' + encodeURIComponent(group) + '&dataId=' + encodeURIComponent(dataId));
+    $('accessRows').innerHTML = rows.map(row => `<tr>
+      <td><b>${escapeHtml(row.clientName || '-')}</b></td>
+      <td>${escapeHtml(row.clientUsername || '-')}</td>
+      <td class="mono">${escapeHtml(row.lastReadAt || '-')}</td>
+      <td class="mono">${escapeHtml(row.lastIp || '-')}</td>
+      <td class="mono">${escapeHtml(row.lastHostname || '-')}</td>
+      <td>r${escapeHtml(row.lastRevision || 0)}</td>
+      <td>${escapeHtml(row.readCount || 0)}</td>
+    </tr>`).join('');
+    $('accessEmpty').classList.toggle('hidden', rows.length > 0);
+    setAccessStatus(rows.length ? `共 ${rows.length} 个项目读取过` : '');
+  } catch (error) {
+    setAccessStatus(error.message, true);
+    showToast(error.message, true);
   }
 }
 
@@ -1662,6 +1725,8 @@ $('closeDetailModal').onclick = closeDetailModal;
 $('closeDetailModalFooter').onclick = closeDetailModal;
 $('closeHistoryModal').onclick = closeHistoryModal;
 $('closeHistoryModalFooter').onclick = closeHistoryModal;
+$('closeAccessModal').onclick = closeAccessModal;
+$('closeAccessModalFooter').onclick = closeAccessModal;
 $('publishHistoryFromDetail').onclick = () => detailHistoryId && publishHistoryVersion(detailHistoryId);
 $('closeImportModal').onclick = closeImportModal;
 $('cancelImport').onclick = closeImportModal;
@@ -1691,6 +1756,7 @@ document.addEventListener('keydown', event => {
   if (event.key === 'Escape') {
     if (!$('confirmModal').classList.contains('hidden')) return closeConfirmModal(false);
     if (!$('detailModal').classList.contains('hidden')) return closeDetailModal();
+    if (!$('accessModal').classList.contains('hidden')) return closeAccessModal();
     if (!$('historyModal').classList.contains('hidden')) return closeHistoryModal();
     if (!$('configModal').classList.contains('hidden')) return closeConfigModal();
     if (!$('importModal').classList.contains('hidden')) return closeImportModal();

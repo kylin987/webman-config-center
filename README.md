@@ -9,6 +9,7 @@
 ## 功能
 
 - 配置管理：新增、编辑、详情、删除、历史版本、发布历史版本为最新版本。
+- 最近读取：按配置查看最近哪些客户端项目读取过，包含项目名、账号、IP、Pod/主机、revision 和读取次数。
 - 批量迁移：支持批量导出 zip，支持导入本系统 zip 和 Nacos 导出的配置 zip。
 - 客户端账号：通过账号密码给业务项目读取配置。
 - 客户端 IP 白名单：只限制客户端读取 API，内网网段默认放行，外网 IP 可在后台手动添加。
@@ -70,6 +71,7 @@ WEBMAN_HTTP_WORKERS=2
 mysql -h127.0.0.1 -P3306 -u config_center -p config_center < sql/001_config_center.sql
 mysql -h127.0.0.1 -P3306 -u config_center -p config_center < sql/002_admin_session.sql
 mysql -h127.0.0.1 -P3306 -u config_center -p config_center < sql/003_client_ip_whitelist.sql
+mysql -h127.0.0.1 -P3306 -u config_center -p config_center < sql/004_config_access_stat.sql
 ```
 
 启动服务：
@@ -149,6 +151,8 @@ GET /api/client/v1/config?namespace=public&group=DEFAULT_GROUP&dataId=app.php
 ```
 
 客户端账号在管理后台的“客户端账号”菜单中创建。
+
+客户端读取成功后，服务端会聚合记录最近读取状态。管理后台配置列表中的“最近读取”按钮可以查看最近读取该配置的项目名、客户端账号、IP、Pod/主机、revision 和读取次数。该记录按项目聚合，不会按每次轮询无限追加明细。
 
 客户端也可以通过同一套账号密码发布配置，适合业务项目需要主动新增或修改配置的场景：
 

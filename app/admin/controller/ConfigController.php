@@ -5,6 +5,7 @@ namespace app\admin\controller;
 use app\common\library\DateTimeFormatter;
 use app\common\model\ConfigHistory;
 use app\common\model\ConfigItem;
+use app\common\server\ConfigAccessStatServer;
 use app\common\server\ConfigBatchServer;
 use app\common\server\ConfigPublishServer;
 use InvalidArgumentException;
@@ -92,6 +93,16 @@ class ConfigController
             'note' => $item->note,
             'created_at' => DateTimeFormatter::beijing($item->created_at),
         ])->values()]);
+    }
+
+    public function access(Request $request): Response
+    {
+        $namespace = (string) ($request->get('namespace') ?: config('config-center.default_namespace'));
+        $group = (string) $request->get('group');
+        $dataId = (string) $request->get('dataId');
+        if ($group === '' || $dataId === '') return json(['code' => 400, 'message' => 'group 和 dataId 为必填项'])->withStatus(400);
+
+        return json(['code' => 0, 'data' => (new ConfigAccessStatServer())->list($namespace, $group, $dataId)]);
     }
 
     public function show(Request $request): Response

@@ -57,6 +57,27 @@ CREATE TABLE `cc_config_outbox` (
   KEY `idx_pending` (`published_at`, `available_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE `cc_config_access_stat` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `namespace` varchar(64) NOT NULL DEFAULT 'public',
+  `config_group` varchar(128) NOT NULL,
+  `data_id` varchar(255) NOT NULL,
+  `client_account_id` bigint unsigned NOT NULL DEFAULT 0,
+  `client_username` varchar(64) NOT NULL DEFAULT '',
+  `client_name` varchar(128) NOT NULL DEFAULT '',
+  `last_ip` varchar(45) NOT NULL DEFAULT '',
+  `last_hostname` varchar(128) NOT NULL DEFAULT '',
+  `last_revision` bigint unsigned NOT NULL DEFAULT 0,
+  `read_count` bigint unsigned NOT NULL DEFAULT 0,
+  `last_read_at` datetime NOT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_config_client` (`namespace`, `config_group`, `data_id`, `client_account_id`, `client_name`),
+  KEY `idx_config` (`namespace`, `config_group`, `data_id`),
+  KEY `idx_last_read_at` (`last_read_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE `cc_client_account` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(128) NOT NULL,

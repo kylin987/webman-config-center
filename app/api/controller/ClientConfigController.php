@@ -4,6 +4,7 @@ namespace app\api\controller;
 
 use app\common\server\ClientConfigServer;
 use app\common\server\ClientIpWhitelistServer;
+use app\common\server\ConfigAccessStatServer;
 use app\common\server\ConfigPublishServer;
 use InvalidArgumentException;
 use support\Request;
@@ -23,7 +24,9 @@ class ClientConfigController
             if ($group === '' || $dataId === '') {
                 return json(['code' => 400, 'message' => 'group 和 dataId 为必填项'])->withStatus(400);
             }
-            return json(['code' => 0, 'data' => (new ClientConfigServer())->read($account, $namespace, $group, $dataId)])
+            $data = (new ClientConfigServer())->read($account, $namespace, $group, $dataId);
+            (new ConfigAccessStatServer())->record($account, $data, $request);
+            return json(['code' => 0, 'data' => $data])
                 ->withHeader('Cache-Control', 'no-store');
         } catch (InvalidArgumentException $exception) {
             $message = $exception->getMessage();

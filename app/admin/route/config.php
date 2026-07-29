@@ -23,6 +23,7 @@ Route::group($adminPrefix . '/api/admin/v1', function () {
     Route::get('/config/groups', [ConfigController::class, 'groups']);
     Route::get('/config/detail', [ConfigController::class, 'show']);
     Route::get('/config/history', [ConfigController::class, 'history']);
+    Route::get('/config/access', [ConfigController::class, 'access']);
     Route::post('/config/publish', [ConfigController::class, 'publish']);
     Route::post('/config/rollback', [ConfigController::class, 'rollback']);
     Route::post('/config/delete', [ConfigController::class, 'delete']);
