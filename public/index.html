@@ -87,6 +87,8 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .table th{font-size:12px;color:#6b7280;font-weight:600;background:#f8fafc}
 .table tr:last-child td{border-bottom:0}
 .table tr:hover td{background:#f8fbff}
+.table tr.access-stale-row td{background:#fff7f7}
+.table tr.access-stale-row:hover td{background:#fff1f0}
 .table-actions{display:flex;gap:6px;flex-wrap:wrap}
 .pager{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;background:#fbfdff;border-top:1px solid var(--line);color:var(--muted)}
 .pager-actions{display:flex;gap:8px;align-items:center}
@@ -94,6 +96,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .mono{font-family:"SFMono-Regular",Consolas,monospace;font-size:12px;color:var(--muted)}
 .tag{display:inline-block;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:12px;border:1px solid #bae0ff}
 .tag.off{background:#f9fafb;color:#6b7280;border-color:#e5e7eb}
+.tag.warn{background:#fff1f0;color:#d92d20;border-color:#ffccc7;margin-left:8px}
 .account-modal-card{width:min(560px,calc(100vw - 42px));height:auto;grid-template-rows:auto 1fr auto}
 .account-modal-body{padding:18px;background:#fbfdff}
 .account-modal-body .field{margin:0 0 14px}
@@ -528,6 +531,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 <script>
 const $ = id => document.getElementById(id);
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
+const accessStaleThresholdMs = 10 * 60 * 1000;
 const adminBasePath = location.pathname.replace(/\/+$/, '');
 const adminApiPrefix = adminBasePath + '/api/admin/v1';
 let adminSession = localStorage.ccAdminSession || '';
@@ -639,6 +643,29 @@ async function api(path, opt = {}) {
   }
   if (!response.ok || body.code !== 0) throw Error(body.message || '请求失败');
   return body.data;
+}
+
+function parseLocalDateTime(value) {
+  if (!value) return null;
+  const match = String(value).trim().match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);
+  if (match) {
+    const [, year, month, day, hour, minute, second] = match.map(Number);
+    return new Date(year, month - 1, day, hour, minute, second);
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function isAccessStale(lastReadAt) {
+  const readAt = parseLocalDateTime(lastReadAt);
+  if (!readAt) return false;
+  return Date.now() - readAt.getTime() > accessStaleThresholdMs;
+}
+
+function renderAccessLastRead(lastReadAt, stale) {
+  const display = escapeHtml(lastReadAt || '-');
+  if (!stale) return display;
+  return `${display}<span class="tag warn">超过 10 分钟，可能无用</span>`;
 }
 
 function showApp(username = '') {
@@ -1115,17 +1142,23 @@ async function loadAccessRows() {
     refreshButton.textContent = '刷新中...';
     setAccessStatus('正在读取...');
     const rows = await api('/api/admin/v1/config/access?group=' + encodeURIComponent(accessContext.group) + '&dataId=' + encodeURIComponent(accessContext.dataId));
-    $('accessRows').innerHTML = rows.map(row => `<tr>
+    let staleCount = 0;
+    $('accessRows').innerHTML = rows.map(row => {
+      const stale = isAccessStale(row.lastReadAt);
+      if (stale) staleCount++;
+      return `<tr class="${stale ? 'access-stale-row' : ''}">
       <td><b>${escapeHtml(row.clientName || '-')}</b></td>
       <td>${escapeHtml(row.clientUsername || '-')}</td>
-      <td class="mono">${escapeHtml(row.lastReadAt || '-')}</td>
+      <td class="mono">${renderAccessLastRead(row.lastReadAt, stale)}</td>
       <td class="mono">${escapeHtml(row.lastIp || '-')}</td>
       <td class="mono">${escapeHtml(row.lastHostname || '-')}</td>
       <td>r${escapeHtml(row.lastRevision || 0)}</td>
       <td>${escapeHtml(row.readCount || 0)}</td>
-    </tr>`).join('');
+    </tr>`;
+    }).join('');
     $('accessEmpty').classList.toggle('hidden', rows.length > 0);
-    setAccessStatus(rows.length ? `共 ${rows.length} 个项目读取过` : '');
+    const staleText = staleCount ? `，${staleCount} 个超过 10 分钟未读取` : '';
+    setAccessStatus(rows.length ? `共 ${rows.length} 个项目读取过${staleText}` : '');
   } catch (error) {
     setAccessStatus(error.message, true);
     showToast(error.message, true);
