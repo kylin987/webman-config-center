@@ -163,6 +163,68 @@ class ClientIpWhitelistServer
         return false;
     }
 
+    public function explain(string $ip): array
+    {
+        $ip = trim($ip);
+        if ($ip === '') {
+            return [
+                'matched' => false,
+                'type' => 'unknown',
+                'name' => '',
+                'cidr' => '',
+                'remark' => '未识别到客户端 IP',
+            ];
+        }
+
+        foreach (self::BUILTIN_RULES as $rule) {
+            if ($this->ipInCidr($ip, $rule['cidr'])) {
+                return [
+                    'matched' => true,
+                    'type' => 'builtin',
+                    'name' => $rule['name'],
+                    'cidr' => $rule['cidr'],
+                    'remark' => $rule['remark'],
+                ];
+            }
+        }
+
+        $manualRules = ClientIpWhitelist::query()
+            ->orderByDesc('enabled')
+            ->orderByDesc('id')
+            ->get();
+
+        foreach ($manualRules as $rule) {
+            if ($this->ipInCidr($ip, (string) $rule->cidr)) {
+                return [
+                    'matched' => (bool) $rule->enabled,
+                    'type' => 'manual',
+                    'name' => (string) $rule->name,
+                    'cidr' => (string) $rule->cidr,
+                    'remark' => trim((string) $rule->remark) ?: ((bool) $rule->enabled ? '手动白名单' : '手动白名单已停用'),
+                    'enabled' => (bool) $rule->enabled,
+                ];
+            }
+        }
+
+        if (!$this->enabled()) {
+            return [
+                'matched' => true,
+                'type' => 'disabled',
+                'name' => '白名单已关闭',
+                'cidr' => '',
+                'remark' => '当前未限制客户端 IP',
+            ];
+        }
+
+        return [
+            'matched' => false,
+            'type' => 'none',
+            'name' => '',
+            'cidr' => '',
+            'remark' => '未匹配任何白名单规则',
+        ];
+    }
+
     public function enabled(): bool
     {
         return (bool) config('config-center.client_ip_whitelist_enable', true);

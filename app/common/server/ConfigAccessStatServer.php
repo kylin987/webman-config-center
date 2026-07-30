@@ -19,6 +19,12 @@ class ConfigAccessStatServer
             if ($clientName === '') {
                 $clientName = $this->normalize((string) $account->name, 128);
             }
+            $ipWhitelist = new ClientIpWhitelistServer();
+            $clientIp = $this->normalize($ipWhitelist->clientIp($request), 45);
+            $hostname = $this->normalize((string) $request->header('x-config-center-hostname', ''), 128);
+            if ($hostname === '') {
+                $hostname = $clientIp;
+            }
 
             Db::statement(
                 'INSERT INTO `cc_config_access_stat`
@@ -39,8 +45,8 @@ class ConfigAccessStatServer
                     (int) $account->id,
                     (string) $account->username,
                     $clientName,
-                    $this->normalize((new ClientIpWhitelistServer())->clientIp($request), 45),
-                    $this->normalize((string) $request->header('x-config-center-hostname', ''), 128),
+                    $clientIp,
+                    $hostname,
                     (int) ($config['revision'] ?? 0),
                     $now,
                     $now,
@@ -64,17 +70,35 @@ class ConfigAccessStatServer
             ->limit(100)
             ->get();
 
+        $ipWhitelist = new ClientIpWhitelistServer();
+
         return $rows->map(fn (ConfigAccessStat $row) => [
             'clientAccountId' => (int) $row->client_account_id,
             'clientUsername' => $row->client_username,
             'clientName' => $row->client_name,
             'lastIp' => $row->last_ip,
+            'lastIpWhitelist' => $this->explainIp($ipWhitelist, (string) $row->last_ip),
             'lastHostname' => $row->last_hostname,
             'lastRevision' => (int) $row->last_revision,
             'readCount' => (int) $row->read_count,
             'lastReadAt' => DateTimeFormatter::beijing($row->last_read_at),
             'updatedAt' => DateTimeFormatter::beijing($row->updated_at),
         ])->values()->all();
+    }
+
+    private function explainIp(ClientIpWhitelistServer $ipWhitelist, string $ip): array
+    {
+        try {
+            return $ipWhitelist->explain($ip);
+        } catch (Throwable) {
+            return [
+                'matched' => false,
+                'type' => 'unknown',
+                'name' => '',
+                'cidr' => '',
+                'remark' => '白名单解释不可用',
+            ];
+        }
     }
 
     private function normalize(string $value, int $limit): string

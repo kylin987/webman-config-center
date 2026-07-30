@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS `cc_config_access_stat` (
   `created_at` datetime NOT NULL,
   `updated_at` datetime NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_config_client` (`namespace`, `config_group`, `data_id`, `client_account_id`, `client_name`),
+  UNIQUE KEY `uk_config_client_instance` (`namespace`, `config_group`, `data_id`, `client_account_id`, `client_name`, `last_hostname`),
   KEY `idx_config` (`namespace`, `config_group`, `data_id`),
   KEY `idx_last_read_at` (`last_read_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

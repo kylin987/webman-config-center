@@ -97,6 +97,10 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .tag{display:inline-block;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:12px;border:1px solid #bae0ff}
 .tag.off{background:#f9fafb;color:#6b7280;border-color:#e5e7eb}
 .tag.warn{background:#fff1f0;color:#d92d20;border-color:#ffccc7;margin-left:8px}
+.ip-cell{display:grid;gap:4px}
+.ip-note{font-family:"SF Pro Text","PingFang SC","Microsoft YaHei",sans-serif;font-size:12px;color:#64748b;line-height:1.45}
+.ip-note.matched{color:#1677ff}
+.ip-note.unmatched{color:#d92d20}
 .account-modal-card{width:min(560px,calc(100vw - 42px));height:auto;grid-template-rows:auto 1fr auto}
 .account-modal-body{padding:18px;background:#fbfdff}
 .account-modal-body .field{margin:0 0 14px}
@@ -668,6 +672,22 @@ function renderAccessLastRead(lastReadAt, stale) {
   return `${display}<span class="tag warn">超过 10 分钟，可能无用</span>`;
 }
 
+function renderAccessIp(row) {
+  const ip = escapeHtml(row.lastIp || '-');
+  const rule = row.lastIpWhitelist || {};
+  const matched = rule.matched !== false;
+  let note = rule.remark || '';
+  const ruleName = rule.name || '';
+  const cidr = rule.cidr || '';
+  if (ruleName || cidr) {
+    note = `${ruleName || '白名单'}${cidr ? ' / ' + cidr : ''}${note ? '：' + note : ''}`;
+  }
+  if (!note) {
+    note = matched ? '已通过白名单' : '未匹配白名单';
+  }
+  return `<span class="ip-cell"><span>${ip}</span><span class="ip-note ${matched ? 'matched' : 'unmatched'}">${escapeHtml(note)}</span></span>`;
+}
+
 function showApp(username = '') {
   const displayName = username || localStorage.ccAdminUsername || 'admin';
   if (username) {
@@ -1150,7 +1170,7 @@ async function loadAccessRows() {
       <td><b>${escapeHtml(row.clientName || '-')}</b></td>
       <td>${escapeHtml(row.clientUsername || '-')}</td>
       <td class="mono">${renderAccessLastRead(row.lastReadAt, stale)}</td>
-      <td class="mono">${escapeHtml(row.lastIp || '-')}</td>
+      <td class="mono">${renderAccessIp(row)}</td>
       <td class="mono">${escapeHtml(row.lastHostname || '-')}</td>
       <td>r${escapeHtml(row.lastRevision || 0)}</td>
       <td>${escapeHtml(row.readCount || 0)}</td>
