@@ -89,6 +89,9 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .table tr:hover td{background:#f8fbff}
 .table tr.access-stale-row td{background:#fff7f7}
 .table tr.access-stale-row:hover td{background:#fff1f0}
+.table tr.access-instance-row td{background:#fbfdff;color:#475569;font-size:12px}
+.table tr.access-instance-row:hover td{background:#f8fbff}
+.table tr.access-instance-row td:first-child{padding-left:34px}
 .table-actions{display:flex;gap:6px;flex-wrap:wrap}
 .pager{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;background:#fbfdff;border-top:1px solid var(--line);color:var(--muted)}
 .pager-actions{display:flex;gap:8px;align-items:center}
@@ -101,6 +104,9 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
 .ip-note{font-family:"SF Pro Text","PingFang SC","Microsoft YaHei",sans-serif;font-size:12px;color:#64748b;line-height:1.45}
 .ip-note.matched{color:#1677ff}
 .ip-note.unmatched{color:#d92d20}
+.source-cell{display:grid;gap:4px}
+.source-title{font-weight:650;color:#1f2937}
+.instance-count{display:inline-flex;align-items:center;justify-content:center;min-width:32px;padding:2px 8px;border-radius:999px;background:#f1f5f9;color:#334155;font-size:12px}
 .account-modal-card{width:min(560px,calc(100vw - 42px));height:auto;grid-template-rows:auto 1fr auto}
 .account-modal-body{padding:18px;background:#fbfdff}
 .account-modal-body .field{margin:0 0 14px}
@@ -463,7 +469,7 @@ input:focus,select:focus{border-color:#69b1ff;box-shadow:0 0 0 3px rgba(22,119,2
     </header>
     <div class="history-body">
       <table class="table">
-        <thead><tr><th>项目</th><th>客户端账号</th><th>最近读取</th><th>IP</th><th>Pod/主机</th><th>版本</th><th>次数</th></tr></thead>
+        <thead><tr><th>项目</th><th>客户端账号</th><th>来源分类</th><th>实例数</th><th>最近读取</th><th>版本</th><th>次数</th><th>操作</th></tr></thead>
         <tbody id="accessRows"></tbody>
       </table>
       <div id="accessEmpty" class="history-empty hidden">暂无读取记录</div>
@@ -549,6 +555,8 @@ let configLoadSeq = 0;
 let historyCache = new Map();
 let historyContext = null;
 let accessContext = null;
+let accessGroupsCache = [];
+let accessExpandedGroups = new Set();
 let detailHistoryId = null;
 let accountCache = new Map();
 let ipWhitelistCache = new Map();
@@ -672,9 +680,7 @@ function renderAccessLastRead(lastReadAt, stale) {
   return `${display}<span class="tag warn">超过 10 分钟，可能无用</span>`;
 }
 
-function renderAccessIp(row) {
-  const ip = escapeHtml(row.lastIp || '-');
-  const rule = row.lastIpWhitelist || {};
+function accessWhitelistNote(rule) {
   const matched = rule.matched !== false;
   let note = rule.remark || '';
   const ruleName = rule.name || '';
@@ -685,7 +691,74 @@ function renderAccessIp(row) {
   if (!note) {
     note = matched ? '已通过白名单' : '未匹配白名单';
   }
+  return {note, matched};
+}
+
+function renderAccessIp(row) {
+  const ip = escapeHtml(row.lastIp || '-');
+  const {note, matched} = accessWhitelistNote(row.lastIpWhitelist || {});
   return `<span class="ip-cell"><span>${ip}</span><span class="ip-note ${matched ? 'matched' : 'unmatched'}">${escapeHtml(note)}</span></span>`;
+}
+
+function renderAccessSource(group) {
+  const rule = group.sourceWhitelist || {};
+  const {note, matched} = accessWhitelistNote(rule);
+  const title = rule.name || rule.cidr || (matched ? '已通过白名单' : '未匹配白名单');
+  return `<span class="source-cell"><span class="source-title">${escapeHtml(title)}</span><span class="ip-note ${matched ? 'matched' : 'unmatched'}">${escapeHtml(note)}</span></span>`;
+}
+
+function renderAccessInstanceRows(group) {
+  if (!accessExpandedGroups.has(group.key)) return '';
+  return (group.instances || []).map(instance => {
+    const stale = isAccessStale(instance.lastReadAt);
+    return `<tr class="access-instance-row ${stale ? 'access-stale-row' : ''}">
+      <td class="mono">↳ ${escapeHtml(instance.lastHostname || '-')}</td>
+      <td></td>
+      <td class="mono">${renderAccessIp(instance)}</td>
+      <td><span class="instance-count">1</span></td>
+      <td class="mono">${renderAccessLastRead(instance.lastReadAt, stale)}</td>
+      <td>r${escapeHtml(instance.lastRevision || 0)}</td>
+      <td>${escapeHtml(instance.readCount || 0)}</td>
+      <td></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderAccessGroups(groups) {
+  let staleGroupCount = 0;
+  let staleInstanceCount = 0;
+  const instanceTotal = groups.reduce((total, group) => total + Number(group.instanceCount || 0), 0);
+  $('accessRows').innerHTML = groups.map(group => {
+    const stale = isAccessStale(group.lastReadAt);
+    if (stale) staleGroupCount++;
+    staleInstanceCount += (group.instances || []).filter(instance => isAccessStale(instance.lastReadAt)).length;
+    const expanded = accessExpandedGroups.has(group.key);
+    return `<tr class="${stale ? 'access-stale-row' : ''}">
+      <td><b>${escapeHtml(group.clientName || '-')}</b></td>
+      <td>${escapeHtml(group.clientUsername || '-')}</td>
+      <td>${renderAccessSource(group)}</td>
+      <td><span class="instance-count">${escapeHtml(group.instanceCount || 0)}</span></td>
+      <td class="mono">${renderAccessLastRead(group.lastReadAt, stale)}</td>
+      <td>r${escapeHtml(group.lastRevision || 0)}</td>
+      <td>${escapeHtml(group.readCount || 0)}</td>
+      <td><button class="secondary small" data-access-group="${escapeHtml(group.key)}">${expanded ? '收起实例' : '查看实例'}</button></td>
+    </tr>${renderAccessInstanceRows(group)}`;
+  }).join('');
+  $('accessEmpty').classList.toggle('hidden', groups.length > 0);
+  const staleText = staleGroupCount ? `，${staleGroupCount} 类来源超过 10 分钟未读取` : '';
+  const staleInstanceText = staleInstanceCount ? `，${staleInstanceCount} 个实例可能无用` : '';
+  setAccessStatus(groups.length ? `共 ${groups.length} 类来源，${instanceTotal} 个实例${staleText}${staleInstanceText}` : '');
+  document.querySelectorAll('[data-access-group]').forEach(button => {
+    button.onclick = () => {
+      const key = button.dataset.accessGroup;
+      if (accessExpandedGroups.has(key)) {
+        accessExpandedGroups.delete(key);
+      } else {
+        accessExpandedGroups.add(key);
+      }
+      renderAccessGroups(accessGroupsCache);
+    };
+  });
 }
 
 function showApp(username = '') {
@@ -1075,6 +1148,8 @@ function closeAccessModal() {
   $('accessModal').classList.add('hidden');
   setAccessStatus('');
   accessContext = null;
+  accessGroupsCache = [];
+  accessExpandedGroups = new Set();
 }
 
 async function publishConfig() {
@@ -1146,6 +1221,8 @@ async function openHistoryModal(group, dataId) {
 
 async function openAccessModal(group, dataId) {
   accessContext = {group, dataId};
+  accessGroupsCache = [];
+  accessExpandedGroups = new Set();
   $('accessTitle').textContent = '最近读取';
   $('accessMeta').textContent = `${dataId} / ${group}`;
   $('accessRows').innerHTML = '';
@@ -1161,24 +1238,8 @@ async function loadAccessRows() {
     refreshButton.disabled = true;
     refreshButton.textContent = '刷新中...';
     setAccessStatus('正在读取...');
-    const rows = await api('/api/admin/v1/config/access?group=' + encodeURIComponent(accessContext.group) + '&dataId=' + encodeURIComponent(accessContext.dataId));
-    let staleCount = 0;
-    $('accessRows').innerHTML = rows.map(row => {
-      const stale = isAccessStale(row.lastReadAt);
-      if (stale) staleCount++;
-      return `<tr class="${stale ? 'access-stale-row' : ''}">
-      <td><b>${escapeHtml(row.clientName || '-')}</b></td>
-      <td>${escapeHtml(row.clientUsername || '-')}</td>
-      <td class="mono">${renderAccessLastRead(row.lastReadAt, stale)}</td>
-      <td class="mono">${renderAccessIp(row)}</td>
-      <td class="mono">${escapeHtml(row.lastHostname || '-')}</td>
-      <td>r${escapeHtml(row.lastRevision || 0)}</td>
-      <td>${escapeHtml(row.readCount || 0)}</td>
-    </tr>`;
-    }).join('');
-    $('accessEmpty').classList.toggle('hidden', rows.length > 0);
-    const staleText = staleCount ? `，${staleCount} 个超过 10 分钟未读取` : '';
-    setAccessStatus(rows.length ? `共 ${rows.length} 个项目读取过${staleText}` : '');
+    accessGroupsCache = await api('/api/admin/v1/config/access?group=' + encodeURIComponent(accessContext.group) + '&dataId=' + encodeURIComponent(accessContext.dataId));
+    renderAccessGroups(accessGroupsCache);
   } catch (error) {
     setAccessStatus(error.message, true);
     showToast(error.message, true);

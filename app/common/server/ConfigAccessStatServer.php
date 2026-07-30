@@ -67,23 +67,74 @@ class ConfigAccessStatServer
                 'data_id' => $dataId,
             ])
             ->orderByDesc('last_read_at')
-            ->limit(100)
+            ->limit(500)
             ->get();
 
         $ipWhitelist = new ClientIpWhitelistServer();
+        $groups = [];
 
-        return $rows->map(fn (ConfigAccessStat $row) => [
-            'clientAccountId' => (int) $row->client_account_id,
-            'clientUsername' => $row->client_username,
-            'clientName' => $row->client_name,
-            'lastIp' => $row->last_ip,
-            'lastIpWhitelist' => $this->explainIp($ipWhitelist, (string) $row->last_ip),
-            'lastHostname' => $row->last_hostname,
-            'lastRevision' => (int) $row->last_revision,
-            'readCount' => (int) $row->read_count,
-            'lastReadAt' => DateTimeFormatter::beijing($row->last_read_at),
-            'updatedAt' => DateTimeFormatter::beijing($row->updated_at),
-        ])->values()->all();
+        foreach ($rows as $row) {
+            $whitelist = $this->explainIp($ipWhitelist, (string) $row->last_ip);
+            $groupKey = implode('|', [
+                (int) $row->client_account_id,
+                (string) $row->client_username,
+                (string) $row->client_name,
+                (string) ($whitelist['type'] ?? ''),
+                (string) ($whitelist['name'] ?? ''),
+                (string) ($whitelist['cidr'] ?? ''),
+                (string) (int) (($whitelist['matched'] ?? false) === true),
+            ]);
+            $instance = [
+                'clientAccountId' => (int) $row->client_account_id,
+                'clientUsername' => $row->client_username,
+                'clientName' => $row->client_name,
+                'lastIp' => $row->last_ip,
+                'lastIpWhitelist' => $whitelist,
+                'lastHostname' => $row->last_hostname,
+                'lastRevision' => (int) $row->last_revision,
+                'readCount' => (int) $row->read_count,
+                'lastReadAt' => DateTimeFormatter::beijing($row->last_read_at),
+                'updatedAt' => DateTimeFormatter::beijing($row->updated_at),
+            ];
+
+            if (!isset($groups[$groupKey])) {
+                $groups[$groupKey] = [
+                    'key' => hash('sha256', $groupKey),
+                    'clientAccountId' => (int) $row->client_account_id,
+                    'clientUsername' => $row->client_username,
+                    'clientName' => $row->client_name,
+                    'sourceWhitelist' => $whitelist,
+                    'lastIp' => $row->last_ip,
+                    'lastRevision' => (int) $row->last_revision,
+                    'readCount' => 0,
+                    'instanceCount' => 0,
+                    'lastReadAt' => DateTimeFormatter::beijing($row->last_read_at),
+                    'updatedAt' => DateTimeFormatter::beijing($row->updated_at),
+                    'instances' => [],
+                    '_lastReadTs' => strtotime((string) $row->last_read_at) ?: 0,
+                ];
+            }
+
+            $groups[$groupKey]['readCount'] += (int) $row->read_count;
+            $groups[$groupKey]['instanceCount']++;
+            $groups[$groupKey]['instances'][] = $instance;
+
+            $lastReadTs = strtotime((string) $row->last_read_at) ?: 0;
+            if ($lastReadTs > $groups[$groupKey]['_lastReadTs']) {
+                $groups[$groupKey]['_lastReadTs'] = $lastReadTs;
+                $groups[$groupKey]['lastIp'] = $row->last_ip;
+                $groups[$groupKey]['lastRevision'] = (int) $row->last_revision;
+                $groups[$groupKey]['lastReadAt'] = DateTimeFormatter::beijing($row->last_read_at);
+                $groups[$groupKey]['updatedAt'] = DateTimeFormatter::beijing($row->updated_at);
+            }
+        }
+
+        usort($groups, fn (array $a, array $b) => ($b['_lastReadTs'] ?? 0) <=> ($a['_lastReadTs'] ?? 0));
+
+        return array_map(function (array $group) {
+            unset($group['_lastReadTs']);
+            return $group;
+        }, $groups);
     }
 
     private function explainIp(ClientIpWhitelistServer $ipWhitelist, string $ip): array
