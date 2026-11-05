@@ -6,12 +6,13 @@ use app\admin\controller\ClientGuideController;
 use app\admin\controller\ClientIpWhitelistController;
 use app\admin\controller\AuthController;
 use app\admin\middleware\AdminAuthMiddleware;
+use app\admin\middleware\AdminMfaThrottleMiddleware;
 use Webman\Route;
 
 $adminPrefix = (string) config('config-center.admin_path', '/cc-admin');
 
 Route::post($adminPrefix . '/api/admin/v1/auth/login', [AuthController::class, 'login']);
-Route::post($adminPrefix . '/api/admin/v1/auth/mfa/verify', [AuthController::class, 'verifyMfa']);
+Route::post($adminPrefix . '/api/admin/v1/auth/mfa/verify', [AuthController::class, 'verifyMfa'])->middleware(AdminMfaThrottleMiddleware::class);
 Route::group($adminPrefix . '/api/admin/v1', function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/profile', [AuthController::class, 'profile']);

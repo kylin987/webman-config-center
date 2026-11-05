@@ -72,6 +72,8 @@ mysql -h127.0.0.1 -P3306 -u config_center -p config_center < sql/001_config_cent
 mysql -h127.0.0.1 -P3306 -u config_center -p config_center < sql/002_admin_session.sql
 mysql -h127.0.0.1 -P3306 -u config_center -p config_center < sql/003_client_ip_whitelist.sql
 mysql -h127.0.0.1 -P3306 -u config_center -p config_center < sql/004_config_access_stat.sql
+mysql -h127.0.0.1 -P3306 -u config_center -p config_center < sql/005_config_access_stat_instance.sql
+mysql -h127.0.0.1 -P3306 -u config_center -p config_center < sql/006_admin_mfa_attempt_limits.sql
 ```
 
 启动服务：
@@ -103,6 +105,25 @@ curl http://127.0.0.1:8787/health
 第一次登录时，如果 `cc_admin_user` 表为空，系统会使用 `.env` 中的 `CONFIG_CENTER_BOOTSTRAP_USERNAME` 和 `CONFIG_CENTER_BOOTSTRAP_PASSWORD` 创建管理员账号。
 
 MFA 二次验证默认不开启。管理员登录后台后，可在“个人中心”手动开启 MFA；开启时支持扫码添加，也保留手动密钥兜底。开启后，该管理员后续登录需要输入验证器中的 6 位动态验证码。关闭 MFA 时也必须输入当前动态验证码。
+
+MFA 登录验证限制：
+
+- 每个 challenge 有效 600 秒，最多失败 5 次；达到后失效，需要重新输入账号密码。
+- 同一账号在 10 分钟窗口内累计失败 10 次，暂停 MFA 登录 10 分钟，同时使该账号现有 challenge 失效；重新输入密码或换发 challenge 不会清零失败次数。
+- 验证成功后清零账号失败计数，消费 challenge 并创建会话；以上使用 MySQL 事务和账号行锁，适用于多个 HTTP worker/Pod。
+- 公开 MFA verify 接口按来源 IP 每 60 秒最多受理 30 次请求，超限返回 HTTP 429 和 `Retry-After`。IP 节流使用所有服务端实例共用的 Redis；Redis 不可用时该接口返回 503，避免绕过限制。密码登录本身不新增 Redis 依赖。
+- 来源 IP 沿用现有 CDN 请求头识别，源站需要限制可信 CDN/代理回源；IP 节流只作为账号/challenge 限制之外的辅助。
+- 失败、挑战失效、账号锁定及首次 IP 超限写入默认日志，不记录验证码、MFA 密钥或原始 challenge token。
+
+**已有部署升级**：先执行一次 `sql/006_admin_mfa_attempt_limits.sql`，再更新/重启服务。该增量只添加带默认值的字段；不需要重跑建表 SQL。新增限制仅针对登录验证，不改变个人中心 MFA 绑定/解绑流程。锁定自然到期后重新登录即可，不需要手工清零数据库。
+
+本地回归（需要 Composer 依赖、MySQL/Redis 可执行程序及 PHP `pdo_mysql`、`redis` 扩展）：
+
+```bash
+python3 tests/run_mfa_limits.py
+```
+
+测试会创建独立临时 MySQL/Redis，验证失败阈值、换发保留计数、到期恢复、重复使用、并发预算及 IP 节流，不加载项目 `.env` 或连接业务数据库。
 
 如果管理员丢失验证器，需要在可信环境中手动重置 MFA：
 

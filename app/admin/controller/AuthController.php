@@ -3,6 +3,7 @@
 namespace app\admin\controller;
 
 use app\common\server\AdminAuthServer;
+use app\common\server\ClientIpWhitelistServer;
 use InvalidArgumentException;
 use support\Request;
 use support\Response;
@@ -21,9 +22,13 @@ class AuthController
     public function verifyMfa(Request $request): Response
     {
         try {
-            return json(['code' => 0, 'data' => (new AdminAuthServer())->verifyMfa((string) $request->post('challengeToken'), (string) $request->post('code'))]);
+            return json(['code' => 0, 'data' => (new AdminAuthServer())->verifyMfa(
+                (string) $request->post('challengeToken'),
+                (string) $request->post('code'),
+                (new ClientIpWhitelistServer())->clientIp($request)
+            )])->withHeader('Cache-Control', 'no-store');
         } catch (InvalidArgumentException $exception) {
-            return json(['code' => 401, 'message' => $exception->getMessage()])->withStatus(401);
+            return json(['code' => 401, 'message' => $exception->getMessage()])->withStatus(401)->withHeader('Cache-Control', 'no-store');
         }
     }
 

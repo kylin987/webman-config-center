@@ -8,6 +8,7 @@ use app\common\model\AdminSession;
 use app\common\model\AdminUser;
 use app\common\library\DateTimeFormatter;
 use InvalidArgumentException;
+use support\Log;
 
 class AdminAuthServer
 {
@@ -24,32 +25,85 @@ class AdminAuthServer
         return $this->createSession($user);
     }
 
-    public function verifyMfa(string $challengeToken, string $code): array
+    public function verifyMfa(string $challengeToken, string $code, string $ip = ''): array
     {
-        $challenge = AdminMfaChallenge::query()
-            ->where('token_hash', hash('sha256', $challengeToken))
-            ->where('expires_at', '>', date('Y-m-d H:i:s'))
-            ->first();
-        if (!$challenge) {
+        $tokenHash = hash('sha256', $challengeToken);
+        $candidate = AdminMfaChallenge::query()->where('token_hash', $tokenHash)->first();
+        if (!$candidate) {
             throw new InvalidArgumentException('二次验证已过期，请重新登录');
         }
 
-        $user = AdminUser::query()->find($challenge->admin_user_id);
-        if (!$user) {
-            throw new InvalidArgumentException('管理员账号不存在');
-        }
+        $result = (new AdminUser())->getConnection()->transaction(function () use ($candidate, $tokenHash, $code) {
+            // 所有换发/验证先锁账号；等待锁后必须重新读取 challenge，防止重复消费。
+            $user = AdminUser::query()->whereKey($candidate->admin_user_id)->lockForUpdate()->first();
+            if (!$user) {
+                return ['error' => '管理员账号不存在'];
+            }
+            $now = date('Y-m-d H:i:s');
+            if ($user->mfa_locked_until && $user->mfa_locked_until > $now) {
+                return ['error' => '二次验证尝试过多，请稍后重新登录'];
+            }
+            $challenge = AdminMfaChallenge::query()->where('token_hash', $tokenHash)
+                ->where('admin_user_id', $user->id)->lockForUpdate()->first();
+            if (!$challenge || $challenge->expires_at <= $now) {
+                return ['error' => '二次验证已过期，请重新登录'];
+            }
+            if ((bool) $challenge->setup_required) {
+                return ['error' => 'MFA 开启流程请在个人中心完成'];
+            }
+            if (!(bool) $user->mfa_enabled || !$user->mfa_secret) {
+                return ['error' => '二次验证已失效，请重新登录'];
+            }
 
-        $setupRequired = (bool) $challenge->setup_required;
-        if ($setupRequired) {
-            throw new InvalidArgumentException('MFA 开启流程请在个人中心完成');
-        }
-        $secret = (string) $user->mfa_secret;
-        if (!Totp::verify($secret, $code)) {
-            throw new InvalidArgumentException('动态验证码错误');
-        }
+            if (!Totp::verify((string) $user->mfa_secret, $code)) {
+                if (!$user->mfa_failure_window_at || strtotime($user->mfa_failure_window_at) <= time() - 600) {
+                    $user->mfa_failed_attempts = 0;
+                    $user->mfa_failure_window_at = $now;
+                    $user->mfa_locked_until = null;
+                }
+                $user->mfa_failed_attempts = (int) $user->mfa_failed_attempts + 1;
+                $challenge->failed_attempts = (int) $challenge->failed_attempts + 1;
+                $accountLocked = $user->mfa_failed_attempts >= 10;
+                $challengeExpired = $challenge->failed_attempts >= 5;
+                if ($accountLocked) {
+                    $user->mfa_locked_until = date('Y-m-d H:i:s', time() + 600);
+                    AdminMfaChallenge::query()->where('admin_user_id', $user->id)->delete();
+                } elseif ($challengeExpired) {
+                    $challenge->delete();
+                } else {
+                    $challenge->save();
+                }
+                $user->save();
+                return [
+                    'error' => $accountLocked ? '二次验证尝试过多，请 10 分钟后重新登录'
+                        : ($challengeExpired ? '二次验证失败次数已达上限，请重新登录' : '动态验证码错误'),
+                    'audit' => [
+                        'event' => $accountLocked ? 'account_locked' : ($challengeExpired ? 'challenge_invalidated' : 'code_failed'),
+                        'admin_user_id' => (int) $user->id,
+                        'challenge_id' => (int) $challenge->id,
+                        'challenge_failures' => (int) $challenge->failed_attempts,
+                        'account_failures' => (int) $user->mfa_failed_attempts,
+                    ],
+                ];
+            }
 
-        AdminMfaChallenge::query()->where('admin_user_id', $user->id)->delete();
-        return $this->createSession($user);
+            $user->forceFill([
+                'mfa_failed_attempts' => 0,
+                'mfa_failure_window_at' => null,
+                'mfa_locked_until' => null,
+            ])->save();
+            AdminMfaChallenge::query()->where('admin_user_id', $user->id)->delete();
+            return ['data' => $this->createSession($user)];
+        });
+
+        // 错误必须在事务提交后抛出，否则失败次数与挑战失效会随异常回滚。
+        if (isset($result['audit'])) {
+            Log::warning('admin mfa verification failed', $result['audit'] + ['ip' => $ip]);
+        }
+        if (isset($result['error'])) {
+            throw new InvalidArgumentException($result['error']);
+        }
+        return $result['data'];
     }
 
     public function profile(AdminUser $user): array
@@ -177,24 +231,26 @@ class AdminAuthServer
 
     private function createMfaChallenge(AdminUser $user): array
     {
-        AdminMfaChallenge::query()->where('admin_user_id', $user->id)->delete();
-        $challengeToken = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
-
-        AdminMfaChallenge::query()->create([
-            'admin_user_id' => $user->id,
-            'token_hash' => hash('sha256', $challengeToken),
-            'mfa_secret' => null,
-            'setup_required' => 0,
-            'expires_at' => date('Y-m-d H:i:s', time() + 600),
-        ]);
-
-        $data = [
-            'mfaRequired' => true,
-            'mfaSetupRequired' => false,
-            'challengeToken' => $challengeToken,
-            'username' => $user->username,
-        ];
-
-        return $data;
+        return $user->getConnection()->transaction(function () use ($user) {
+            $user = AdminUser::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
+            if ($user->mfa_locked_until && $user->mfa_locked_until > date('Y-m-d H:i:s')) {
+                throw new InvalidArgumentException('二次验证尝试过多，请稍后重新登录');
+            }
+            AdminMfaChallenge::query()->where('admin_user_id', $user->id)->delete();
+            $challengeToken = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+            AdminMfaChallenge::query()->create([
+                'admin_user_id' => $user->id,
+                'token_hash' => hash('sha256', $challengeToken),
+                'mfa_secret' => null,
+                'setup_required' => 0,
+                'expires_at' => date('Y-m-d H:i:s', time() + 600),
+            ]);
+            return [
+                'mfaRequired' => true,
+                'mfaSetupRequired' => false,
+                'challengeToken' => $challengeToken,
+                'username' => $user->username,
+            ];
+        });
     }
 }
